@@ -9,6 +9,22 @@ class User(UserMixin, db.Model):
     """用户模型"""
     __tablename__ = 'users'
     
+
+    # 1. id：用户ID
+    # 2. username：用户名
+    # 3. email：邮箱
+    # 4. password_hash：密码哈希
+    # 5. first_name：名
+    # 6. last_name：姓
+    # 7. bio：个人简介
+    # 8. avatar_url：头像URL
+    # 9. is_active：是否激活
+    # 10. is_admin：是否管理员
+    # 11. created_at：创建时间
+    # 12. updated_at：更新时间
+    # 13. last_login：最后登录时间
+    
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
