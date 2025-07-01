@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>逐字输出网页</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background: url("/static/guga/cat_background.jpg") no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #float-box {
+            position: absolute;
+            bottom: -400px; /* 初始隐藏 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            min-height: 200px;
+            background-color: rgba(255, 255, 255, 0.6);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-size: 20px;
+            transition: bottom 0.8s ease;
+            overflow-y: auto;
+            max-height: 65%;
+        }
+
+        #float-box.show {
+            bottom: 60px;
+        }
+
+        #swing-img {
+  position: absolute;
+  bottom: calc(90% + 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: translateX(-50%) rotate(0deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(360deg);
+  }
+}
+
+
+        #show-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 18px;
+            font-size: 16px;
+            background-color: #0077cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="float-box"></div>
+        <img id="swing-img" src="/static/guga/gugugaga.png" alt="摆动图像">
+        <button id="show-btn">弹出文字框</button>
+    </div>
+
+    <script>
+        const floatBox = document.getElementById("float-box");
+        const showBtn = document.getElementById("show-btn");
+        const text = `{{ text }}`;  // Flask传入变量
+        let index = 0;
+
+        function appendTextSlowly() {
+            if (index < text.length) {
+                const char = text.charAt(index);
+                floatBox.innerHTML += char === '\n' ? '<br>' : char;
+                index++;
+            } else {
+                index = 0;
+                floatBox.innerHTML += '<br><br>';  // 每轮之间留空行
+            }
+            setTimeout(appendTextSlowly, 100);
+        }
+
+        showBtn.addEventListener("click", () => {
+            floatBox.classList.toggle("show");
+        });
+
+        appendTextSlowly(); // 页面加载自动开始
+    </script>
+</body>
+</html>

@@ -101,3 +101,8 @@ def guga_chat():
                            background_image_url=url_for('static', filename='guga/MyGO_background.png')
                            )
 
+@main_bp.route('/guli')
+def guli():
+    content = "灵感菇里菇里菇里瓜恰~\n灵感菇灵感菇~\n"
+    return render_template('guga/guli.html', content=content)
+
