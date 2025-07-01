@@ -11,8 +11,8 @@
                 <h1 class="display-4 fw-bold mb-4">欢迎来到2025FlaskBlog</h1>
                 <p class="lead mb-4">这是介绍文本。</p>
                 <div class="d-flex gap-3">
-                    <a href="#" class="btn btn-light btn-lg px-4">开始写作</a>
-                    <a href="#" class="btn btn-outline-light btn-lg px-4">了解更多</a>
+                    <a href="{{ url_for('main.create_post') }}" class="btn btn-light btn-lg px-4">开始写作</a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-light btn-lg px-4">了解更多</a>
                 </div>
             </div>
             <div class="col-lg-6 text-center">
@@ -79,7 +79,7 @@
                 <p class="text-muted">发现社区中的精彩内容</p>
             </div>
             <div class="col-lg-4 text-lg-end">
-                <a href="#" class="btn btn-primary">查看所有文章</a>
+                <a href="{{ url_for('main.post_list') }}" class="btn btn-primary">查看所有文章</a>
             </div>
         </div>
         
@@ -177,8 +177,8 @@
                 <h2 class="fw-bold mb-4">准备好开始你的博客之旅了吗？</h2>
                 <p class="lead text-muted mb-4">加入我们的社区，分享你的想法，连接志同道合的朋友。</p>
                 <div class="d-flex gap-3 justify-content-center">
-                    <a href="#" class="btn btn-primary btn-lg px-4">立即注册</a>
-                    <a href="#" class="btn btn-outline-primary btn-lg px-4">了解更多</a>
+                    <a href="{{ url_for('main.register') }}" class="btn btn-primary btn-lg px-4">立即注册</a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-primary btn-lg px-4">了解更多</a>
                 </div>
             </div>
         </div>

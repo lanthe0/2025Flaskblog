@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import current_user, logout_user, login_user
-from app.models import User
+from app.models import User, Post
 from app import db
 
 # 创建蓝图
@@ -18,6 +18,7 @@ def index():
 def about():
     return render_template('about.html')
 
+# ===================== 用户相关 =====================
 # 登录
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -37,7 +38,7 @@ def login():
             return redirect(url_for('main.index'))
         else:
             flash('用户名或密码错误', 'danger')
-            return redirect(url_for('auth/main.login'))
+            return redirect(url_for('main.login'))
     # 渲染登录页面
     return render_template('auth/login.html')
 
@@ -51,19 +52,19 @@ def register():
         # 检查输入是否为空
         if not username or not password or not email:
             flash('请填写完整信息', 'danger')
-            return redirect(url_for('auth/main.register'))
+            return redirect(url_for('main.register'))
         
         # 检查用户名是否已存在
         ExistingUser = User.query.filter_by(username=username).first()
         if ExistingUser:
             flash('用户名已存在', 'danger')
-            return redirect(url_for('auth/main.register'))
+            return redirect(url_for('main.register'))
         # 创建新用户
         user = User(username=username, email=email, password=password)
         db.session.add(user)
         db.session.commit()
         flash('注册成功，请登录', 'success')
-        return redirect(url_for('auth/main.login'))
+        return redirect(url_for('main.login'))
     
     return render_template('auth/register.html')
 
@@ -73,21 +74,37 @@ def logout():
     logout_user()
     return redirect(url_for('main.index'))
 
-# 文章
+# 用户个人资料
+@main_bp.route('/user/<int:user_id>')
+def user_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('user/profile.html', user=user)
+
+# 用户文章列表
+@main_bp.route('/user/<int:user_id>/posts')
+def user_posts(user_id):
+    user = User.query.get_or_404(user_id)
+    posts = Post.query.filter_by(author=user).all()
+    return render_template('user/posts.html', user=user, posts=posts)
+
+# ===================== 文章相关 =====================
+# 文章总览
 @main_bp.route('/post')
-def article():
-    return render_template('post.html')
+def post_list():
+    return render_template('post/post.html')
 
 # 文章详情
 @main_bp.route('/post/<int:post_id>')
 def post_detail(post_id):
-    return render_template('detail.html')
+    return render_template('post/detail.html')
 
-# 写文章
+# 写新文章
 @main_bp.route('/post/create')
-def new_post():
-    return render_template('create.html')
+def create_post():
+    return render_template('post/create.html')
 
+
+# ===================== 奇妙功能 =====================
 @main_bp.route('/guga')
 def guga():
     return render_template('guga/guga.html',

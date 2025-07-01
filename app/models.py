@@ -1,9 +1,8 @@
+from app import db
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-
-db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     """用户模型"""
@@ -40,8 +39,14 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
     
     # 关联关系
+    # 用户 —— 文章 一对多
     posts = db.relationship('Post', backref='author', lazy='dynamic', cascade='all, delete-orphan')
+    
+    # 用户 —— 评论 一对多
     comments = db.relationship('Comment', backref='author', lazy='dynamic', cascade='all, delete-orphan')
+
+    # 用户 —— 点赞 一对多
+    likes = db.relationship('Like', backref='author', lazy='dynamic', cascade='all, delete-orphan')
     
     def __init__(self, username, email, password, first_name=None, last_name=None):
         self.username = username
@@ -90,3 +95,63 @@ class User(UserMixin, db.Model):
     
     def __repr__(self):
         return f'<User {self.username}>'
+
+class Post(db.Model):
+    """文章模型"""
+    __tablename__ = 'posts'
+    
+    # id：主键，自增ID
+    # title：文章标题，字符串类型，必填
+    # content：文章内容，长文本，必填
+    # summary：文章摘要，字符串类型，可选
+    # created_at：创建时间，默认为当前时间
+    # updated_at：更新时间，每次更新自动修改
+    # views：浏览量，默认为0
+    # author_id：作者ID，外键，关联users表，必填
+    # is_published：是否已发布，布尔值，默认为True
+    # is_featured：是否为精选，布尔值，默认为False
+    # is_deleted：是否已删除，布尔值，默认为False
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    summary = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    views = db.Column(db.Integer, default=0)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_published = db.Column(db.Boolean, default=True)
+    is_featured = db.Column(db.Boolean, default=False)
+    is_deleted = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f'<Post {self.title}>'
+
+class Comment(db.Model):
+    """评论模型"""
+    __tablename__ = 'comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+
+    # 通过backref，User和Post模型可直接访问comments
+
+    def __repr__(self):
+        return f'<Comment {self.id}>'
+
+class Like(db.Model):
+    """点赞模型"""
+    __tablename__ = 'likes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+
+    # 通过backref，User和Post模型可直接访问likes
+
+    def __repr__(self):
+        return f'<Like {self.id}>'

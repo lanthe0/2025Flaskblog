@@ -93,10 +93,10 @@
                         <a class="nav-link" href="{{ url_for('main.index') }}">首页</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">文章</a>
+                        <a class="nav-link" href="{{ url_for('main.post_list') }}">文章</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">关于</a>
+                        <a class="nav-link" href="{{ url_for('main.about') }}">关于</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.guga') }}">咕嘎Chat</a>
@@ -109,14 +109,14 @@
                                 <i class="fas fa-user me-1"></i>{{ current_user.username }}
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">个人资料</a></li>
-                                <li><a class="dropdown-item" href="#">我的文章</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.user_profile', user_id=current_user.id) }}">个人资料</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.user_posts', user_id=current_user.id) }}">我的文章</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#">退出登录</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">退出登录</a></li>
                             </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="btn btn-primary ms-2" href="#">写文章</a>
+                            <a class="btn btn-primary ms-2" href="{{ url_for('main.create_post') }}">写文章</a>
                         </li>
                     {% else %}
                         <li class="nav-item">
@@ -147,9 +147,9 @@
                 <div class="col-md-4">
                     <h6>快速链接</h6>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-muted text-decoration-none">首页</a></li>
-                        <li><a href="#" class="text-muted text-decoration-none">文章</a></li>
-                        <li><a href="#" class="text-muted text-decoration-none">关于我们</a></li>
+                        <li><a href="{{ url_for('main.index') }}" class="text-muted text-decoration-none">首页</a></li>
+                        <li><a href="{{ url_for('main.post_list') }}" class="text-muted text-decoration-none">文章</a></li>
+                        <li><a href="{{ url_for('main.about') }}" class="text-muted text-decoration-none">关于我们</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4">
