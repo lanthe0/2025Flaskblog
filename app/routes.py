@@ -47,4 +47,11 @@ def post_detail(post_id):
 def new_post():
     return render_template('create.html')
 
+@main_bp.route('/guga')
+def guga():
+    return render_template('guga/guga.html',
+                           background_image_url=url_for('static', filename='guga/MyGO_background.png'),
+                           panel_image_url=url_for('static', filename='guga/gugugaga.png')
+                           )
+
 

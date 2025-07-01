@@ -15,4 +15,22 @@ if __name__ == '__main__':
         # 创建数据库表
         db.create_all()
     
-    app.run(debug=True)
+    import socket
+    
+    # 获取网络信息
+    hostname = socket.gethostname()
+    ipv6_addrs = [addr[4][0] for addr in socket.getaddrinfo(hostname, None, socket.AF_INET6)
+                 if not addr[4][0].startswith('fe80::')]
+    
+    print("\n=== 服务器启动后可通过以下方式访问 ===")
+    print(f" - IPv4本地: http://localhost:5000")
+    if ipv6_addrs:
+        print(f" - IPv6网络: http://[{ipv6_addrs[0]}]:5000")
+    
+    # 开发服务器配置(双栈IPv4/IPv6)
+    app.run(
+        host='0.0.0.0',  # 同时监听IPv4和IPv6
+        port=5000,
+        debug=True,
+        use_reloader=True
+    )

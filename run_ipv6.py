@@ -1,5 +1,7 @@
 from waitress import serve
-from flaskr import create_app
+from app import create_app, db
+from app.models import User
+from flask_login import current_user
 import socket
 import sys
 
@@ -26,10 +28,21 @@ def get_network_info():
 def start_server():
     """启动服务器"""
     app = create_app()
+    
+    # 添加上下文处理器
+    @app.context_processor
+    def inject_user():
+        """注入用户信息到模板上下文"""
+        return dict(current_user=current_user)
+    
     port = 5000
     
     print("\n=== 正在启动Flask服务器 ===")
     print("Waitress服务器初始化中...")
+    
+    # 初始化数据库
+    with app.app_context():
+        db.create_all()
     
     # 显式绑定到IPv6地址
     serve(app, host='::', port=port)

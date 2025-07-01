@@ -1,7 +1,11 @@
-Flask
-Flask-SQLAlchemy
-Flask-Login
-Flask-WTF
-Flask-Migrate
-Flask-Bcrypt
-email-validator
+Flask==2.3.2
+Flask-SQLAlchemy==3.0.5
+Flask-Login==0.6.2
+Flask-WTF==1.1.1
+Flask-Migrate==4.0.4
+Flask-Bcrypt==1.0.1
+email-validator==2.0.0
+waitress==2.1.2
+python-dotenv==1.0.0
+psycopg2-binary==2.9.6  # PostgreSQL支持
+pytest==7.4.0  # 测试依赖
