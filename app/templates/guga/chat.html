@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>咕咕嘎嘎聊天室</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: url("{{ background_image_url }}") no-repeat center center fixed;
+            background-size: cover;
+        }
+        .chat-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .user-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 102;
+        }
+        .back-button {
+            color: white;
+            font-size: 18px;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .back-button:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .username {
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+        }
+        .chat-container {
+            width: 60%;
+            max-width: 800px;
+            min-width: 400px;
+            height: 60%;
+            min-height: 400px;
+            max-height: 800px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(23, 43, 77, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            position: absolute;
+            cursor: move;
+            resize: both;
+            overflow: auto;
+        }
+        .messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            color: white;
+        }
+        .input-area {
+            display: flex;
+        }
+        #message-input {
+            flex-grow: 1;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #5f9ea0;
+            background: #f8f9fa;
+            color: #333;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        #message-input:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        #send-button {
+            margin-left: 10px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            background: #1a73e8;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #send-button:hover {
+            background: #1765d1;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-panel">
+        <div class="user-info">
+            <a href="/guga" class="back-button">← 返回</a>
+            <span class="username">
+                {% if g.user %}
+                    {{ g.user['username'] }}
+                {% else %}
+                    未登录
+                {% endif %}
+            </span>
+        </div>
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <!-- 消息将在这里显示 -->
+            </div>
+            <div class="input-area" id="inputArea">
+                <input type="text" id="message-input" placeholder="输入消息...">
+                <button id="send-button">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 拖动和调整大小功能
+        const chatContainer = document.querySelector('.chat-container');
+        let isDragging = false;
+        let isResizing = false;
+        let offsetX, offsetY;
+        let startWidth, startHeight;
+        
+        chatContainer.addEventListener('mousedown', (e) => {
+            const rect = chatContainer.getBoundingClientRect();
+            const isResizeHandle = 
+                e.clientX > rect.right - 20 && 
+                e.clientY > rect.bottom - 20;
+            
+            if (isResizeHandle) {
+                isResizing = true;
+                startWidth = rect.width;
+                startHeight = rect.height;
+                chatContainer.style.cursor = 'se-resize';
+            } else if (e.target === chatContainer || e.target.classList.contains('chat-container')) {
+                isDragging = true;
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                chatContainer.style.cursor = 'grabbing';
+            }
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                chatContainer.style.left = (e.clientX - offsetX) + 'px';
+                chatContainer.style.top = (e.clientY - offsetY) + 'px';
+            } else if (isResizing) {
+                const newWidth = startWidth + (e.clientX - (chatContainer.getBoundingClientRect().left + startWidth));
+                const newHeight = startHeight + (e.clientY - (chatContainer.getBoundingClientRect().top + startHeight));
+                
+                chatContainer.style.width = Math.max(400, Math.min(800, newWidth)) + 'px';
+                chatContainer.style.height = Math.max(400, Math.min(800, newHeight)) + 'px';
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            isResizing = false;
+            chatContainer.style.cursor = 'move';
+        });
+
+        // 未登录处理
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const inputArea = document.querySelector('.input-area');
+        
+        if (!{{ 'true' if g.user else 'false' }}) {
+            messageInput.placeholder = "请先登录";
+            messageInput.readOnly = true;
+            sendButton.disabled = true;
+            
+            // 整个输入区域可点击跳转
+            inputArea.style.cursor = 'pointer';
+            inputArea.addEventListener('click', function() {
+                window.location.href = "{{ url_for('main.login') }}?next={{ request.path }}";
+            });
+        } else {
+            // 消息发送功能
+            const messagesContainer = document.getElementById('messages');
+            let chatHistory = [];
+            
+            function addMessage(message) {
+                chatHistory.push(message);
+                const messageElement = document.createElement('div');
+                messageElement.textContent = message;
+                messagesContainer.appendChild(messageElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            sendButton.addEventListener('click', () => {
+                const message = messageInput.value.trim();
+                if (message) {
+                    addMessage(message);
+                    messageInput.value = '';
+                }
+            });
+            
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const message = messageInput.value.trim();
+                    if (message) {
+                        addMessage(message);
+                        messageInput.value = '';
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

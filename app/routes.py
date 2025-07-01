@@ -54,4 +54,9 @@ def guga():
                            panel_image_url=url_for('static', filename='guga/gugugaga.png')
                            )
 
+@main_bp.route('/guga/chat')
+def guga_chat():
+    return render_template('guga/chat.html',
+                           background_image_url=url_for('static', filename='guga/MyGO_background.png')
+                           )
 
