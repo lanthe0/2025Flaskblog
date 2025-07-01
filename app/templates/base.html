@@ -120,10 +120,10 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="#">登录</a>
+                            <a class="nav-link" href="{{ url_for('main.login') }}">登录</a>
                         </li>
                         <li class="nav-item">
-                            <a class="btn btn-primary ms-2" href="#">注册</a>
+                            <a class="btn btn-primary ms-2" href="{{ url_for('main.register') }}">注册</a>
                         </li>
                     {% endif %}
                 </ul>
