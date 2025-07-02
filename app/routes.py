@@ -103,6 +103,6 @@ def guga_chat():
 
 @main_bp.route('/guli')
 def guli():
-    content = "灵感菇里菇里菇里瓜恰~\n灵感菇灵感菇~\n"
-    return render_template('guga/guli.html', content=content)
+    text = "灵感菇里菇里菇里瓜恰~\n灵感菇灵感菇~\n"
+    return render_template('guga/guli.html', text=text)
 

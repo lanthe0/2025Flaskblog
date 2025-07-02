@@ -89,24 +89,44 @@
         const showBtn = document.getElementById("show-btn");
         const text = `{{ text }}`;  // Flask传入变量
         let index = 0;
+        let typingTimeout = null;
 
-        function appendTextSlowly() {
-            if (index < text.length) {
-                const char = text.charAt(index);
-                floatBox.innerHTML += char === '\n' ? '<br>' : char;
-                index++;
-            } else {
-                index = 0;
-                floatBox.innerHTML += '<br><br>';  // 每轮之间留空行
+        function startTypeWriter() {
+            // 清空内容并重置状态
+            floatBox.innerHTML = '';
+            index = 0;
+            
+            // 清除之前的定时器
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
             }
-            setTimeout(appendTextSlowly, 100);
+            
+            function typeWriterEffect() {
+                if (index < text.length) {
+                    const char = text.charAt(index);
+                    floatBox.innerHTML += char === '\n' ? '<br>' : char;
+                    index++;
+                    typingTimeout = setTimeout(typeWriterEffect, 50);
+                } else {
+                    // 完成一轮后添加空行并重新开始
+                    floatBox.innerHTML += '<br><br>';
+                    index = 0;
+                    typingTimeout = setTimeout(typeWriterEffect, 500); // 短暂延迟后重新开始
+                }
+            }
+            
+            typeWriterEffect();
         }
 
         showBtn.addEventListener("click", () => {
+            const wasShowing = floatBox.classList.contains('show');
             floatBox.classList.toggle("show");
+            
+            // 如果是从隐藏变为显示状态，开始输出
+            if (!wasShowing && floatBox.classList.contains('show')) {
+                startTypeWriter();
+            }
         });
-
-        appendTextSlowly(); // 页面加载自动开始
     </script>
 </body>
 </html>
