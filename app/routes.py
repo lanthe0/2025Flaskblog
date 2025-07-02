@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import current_user, logout_user, login_user
+from flask_login import current_user, logout_user, login_user, login_required
 from app.models import User, Post
 from app import db
 
@@ -78,7 +78,14 @@ def logout():
 @main_bp.route('/user/<int:user_id>')
 def user_profile(user_id):
     user = User.query.get_or_404(user_id)
-    return render_template('user/profile.html', user=user)
+    posts = Post.query.filter_by(author_id=user.id).order_by(Post.created_at.desc()).all()
+    return render_template('user/profile.html', user=user, posts=posts)
+
+# 用户编辑资料
+@main_bp.route('/user/<int:user_id>/set')
+def user_set(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('user/set.html', user=user)
 
 # 用户文章列表
 @main_bp.route('/user/<int:user_id>/posts')
@@ -86,6 +93,23 @@ def user_posts(user_id):
     user = User.query.get_or_404(user_id)
     posts = Post.query.filter_by(author=user).all()
     return render_template('user/posts.html', user=user, posts=posts)
+
+# 用户编辑资料
+@main_bp.route('/user/<int:user_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.id != current_user.id:
+        flash('无权操作他人资料', 'danger')
+        return redirect(url_for('main.user_profile', user_id=user_id))
+    if request.method == 'POST':
+        user.username = request.form.get('username', '').strip()
+        user.avatar_url = request.form.get('avatar_url', '').strip()
+        user.bio = request.form.get('bio', '').strip()
+        db.session.commit()
+        flash('资料已更新', 'success')
+        return redirect(url_for('main.user_profile', user_id=user_id))
+    return render_template('user/edit_profile.html', user=user)
 
 # ===================== 文章相关 =====================
 # 文章总览

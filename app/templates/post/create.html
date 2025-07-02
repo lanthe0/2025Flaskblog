@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}新建文章 - 2025FlaskBlog{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/github.min.css') }}">
+<style>
+.md-editor-row { display: flex; gap: 2rem; }
+.md-editor-col { flex: 1 1 0; min-width: 0; }
+.md-preview { background: #f8f9fa; border-radius: 0.5rem; padding: 1rem; min-height: 400px; border: 1px solid #eee; overflow-x: auto; }
+@media (max-width: 900px) {
+  .md-editor-row { flex-direction: column; gap: 1rem; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h3 class="mb-4 text-primary fw-bold">新建文章</h3>
+                    <form method="post" id="postForm">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">文章标题</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="category" class="form-label">文章分类</label>
+                            <select class="form-select" id="category" name="category">
+                                <option value="默认" selected>默认</option>
+                                <option value="随笔">随笔</option>
+                                <option value="技术">技术</option>
+                                <option value="生活">生活</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">文章内容（Markdown）</label>
+                            <div class="md-editor-row">
+                                <div class="md-editor-col">
+                                    <textarea class="form-control" id="content" name="content" rows="18" placeholder="支持Markdown语法" required></textarea>
+                                </div>
+                                <div class="md-editor-col">
+                                    <div class="md-preview" id="mdPreview"></div>
+                                </div>
+                            </div>
+                            <div class="form-text mt-1">左侧输入Markdown，右侧实时预览效果。</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">文章状态</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="is_published" id="public" value="1" checked>
+                                    <label class="form-check-label" for="public">公开</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="is_published" id="private" value="0">
+                                    <label class="form-check-label" for="private">私有</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="pin" class="form-label">置顶顺序</label>
+                            <input type="number" class="form-control" id="pin" name="pin" min="0" value="0">
+                            <div class="form-text">数字越小越靠前，0为不置顶。</div>
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg me-md-2">发布文章</button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg" onclick="saveDraft()">保存为草稿</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+<script>
+function renderMarkdown() {
+    const raw = document.getElementById('content').value;
+    const html = marked.parse(raw);
+    document.getElementById('mdPreview').innerHTML = html;
+    document.querySelectorAll('#mdPreview pre code').forEach((el) => {
+        hljs.highlightElement(el);
+    });
+}
+document.getElementById('content').addEventListener('input', renderMarkdown);
+window.addEventListener('DOMContentLoaded', renderMarkdown);
+function saveDraft() {
+    document.getElementById('public').checked = false;
+    document.getElementById('private').checked = true;
+    document.getElementById('postForm').submit();
+}
+</script>
+{% endblock %}
