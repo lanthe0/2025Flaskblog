@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 
 {% block title %}个人资料 - {{ user.username }}{% endblock %}
-
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/github.min.css') }}">
+{% endblock %}
 {% block content %}
 <div class="container py-5">
     <div class="row">
@@ -57,9 +59,9 @@
                                 <div class="mb-2 text-muted small">
                                     <i class="fas fa-clock me-1"></i>{{ post.created_at.strftime('%Y-%m-%d') }}
                                 </div>
-                                <p class="card-text text-muted flex-grow-1">
-                                    {{ post.summary or post.content[:60] ~ '...' }}
-                                </p>
+                                <div class="card-text text-muted flex-grow-1 article-preview" id="preview-{{ post.id }}">
+                                    加载中...
+                                </div>
                                 <div class="mt-2 d-flex justify-content-between align-items-center">
                                     <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">阅读全文</a>
                                     <div class="text-muted small">
@@ -81,4 +83,21 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+<script>
+// 渲染所有文章摘要/内容为Markdown预览
+{% for post in posts %}
+(function() {
+    var raw = {{ (post.summary or post.content[:80] ~ '...')|tojson }};
+    var html = marked.parse(raw);
+    document.getElementById('preview-{{ post.id }}').innerHTML = html;
+    document.querySelectorAll('#preview-{{ post.id }} pre code').forEach((el) => {
+        hljs.highlightElement(el);
+    });
+})();
+{% endfor %}
+</script>
 {% endblock %}

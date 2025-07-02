@@ -4,8 +4,13 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/github.min.css') }}">
 <style>
 .md-editor-row { display: flex; gap: 2rem; }
-.md-editor-col { flex: 1 1 0; min-width: 0; }
-.md-preview { background: #f8f9fa; border-radius: 0.5rem; padding: 1rem; min-height: 400px; border: 1px solid #eee; overflow-x: auto; }
+.md-editor-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.md-editor-area, .md-preview {
+  min-height: 400px;
+  max-height: 600px;
+  height: 100%;
+  overflow: auto;
+}
 @media (max-width: 900px) {
   .md-editor-row { flex-direction: column; gap: 1rem; }
 }
@@ -37,10 +42,10 @@
                             <label class="form-label">文章内容（Markdown）</label>
                             <div class="md-editor-row">
                                 <div class="md-editor-col">
-                                    <textarea class="form-control" id="content" name="content" rows="18" placeholder="支持Markdown语法" required></textarea>
+                                    <textarea class="form-control md-editor-area" id="content" name="content" placeholder="支持Markdown语法" required style="resize:vertical;"></textarea>
                                 </div>
                                 <div class="md-editor-col">
-                                    <div class="md-preview" id="mdPreview"></div>
+                                    <div id="mdPreview" class="markdown-body border rounded-3 p-3 bg-light md-preview"></div>
                                 </div>
                             </div>
                             <div class="form-text mt-1">左侧输入Markdown，右侧实时预览效果。</div>
@@ -75,19 +80,22 @@
 </div>
 {% endblock %}
 {% block extra_js %}
+{{ super() }}
 <script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
 <script>
-function renderMarkdown() {
+function renderPreview() {
     const raw = document.getElementById('content').value;
     const html = marked.parse(raw);
     document.getElementById('mdPreview').innerHTML = html;
     document.querySelectorAll('#mdPreview pre code').forEach((el) => {
         hljs.highlightElement(el);
     });
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([document.getElementById('mdPreview')]);
+    }
 }
-document.getElementById('content').addEventListener('input', renderMarkdown);
-window.addEventListener('DOMContentLoaded', renderMarkdown);
+document.getElementById('content').addEventListener('input', renderPreview);
+window.addEventListener('DOMContentLoaded', renderPreview);
 function saveDraft() {
     document.getElementById('public').checked = false;
     document.getElementById('private').checked = true;

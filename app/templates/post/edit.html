@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}编辑文章{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <h2 class="fw-bold mb-4">编辑文章</h2>
+    <form method="post" id="edit-post-form">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">标题</label>
+                    <input type="text" class="form-control" name="title" value="{{ post.title }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">摘要</label>
+                    <input type="text" class="form-control" name="summary" value="{{ post.summary }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">正文</label>
+                    <textarea class="form-control" name="content" id="content-input" rows="12" required>{{ post.content }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">保存修改</button>
+                <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="btn btn-secondary ms-2">取消</a>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">实时预览</label>
+                <div id="preview" class="markdown-body border rounded-3 p-3 bg-light" style="min-height: 400px; max-height: 600px; overflow:auto;"></div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/github.min.css') }}">
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
+<script>
+function renderPreview() {
+    const raw = document.getElementById('content-input').value;
+    const html = marked.parse(raw);
+    document.getElementById('preview').innerHTML = html;
+    document.querySelectorAll('#preview pre code').forEach((el) => {
+        hljs.highlightElement(el);
+    });
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([document.getElementById('preview')]);
+    }
+}
+document.getElementById('content-input').addEventListener('input', renderPreview);
+window.addEventListener('DOMContentLoaded', renderPreview);
+</script>
+{% endblock %} 

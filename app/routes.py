@@ -2,6 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import current_user, logout_user, login_user, login_required
 from app.models import User, Post
 from app import db
+import markdown
+from flask import Markup
 
 # 创建蓝图
 main_bp = Blueprint('main', __name__)
@@ -11,7 +13,9 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/index')
 def index():
     """首页路由"""
-    return render_template('index.html')
+    # 取最新6篇已发布文章
+    posts = Post.query.filter_by(is_published=True).order_by(Post.created_at.desc()).limit(6).all()
+    return render_template('index.html', posts=posts)
 
 # 关于
 @main_bp.route('/about')
@@ -115,18 +119,73 @@ def edit_profile(user_id):
 # 文章总览
 @main_bp.route('/post')
 def post_list():
-    return render_template('post/post.html')
+    posts = Post.query.filter_by(is_published=True).order_by(Post.created_at.desc()).all()
+    return render_template('post/post.html', posts=posts)
 
 # 文章详情
 @main_bp.route('/post/<int:post_id>')
 def post_detail(post_id):
-    return render_template('post/detail.html')
+    post = Post.query.get_or_404(post_id)
+    html_content = Markup(markdown.markdown(
+        post.content,
+        extensions=['fenced_code', 'codehilite', 'tables', 'toc']
+    ))
+    return render_template('post/detail.html', post=post, html_content=html_content)
 
 # 写新文章
-@main_bp.route('/post/create')
+@main_bp.route('/post/create', methods=['GET', 'POST'])
+@login_required
 def create_post():
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+        category = request.form.get('category', '默认')
+        is_published = request.form.get('is_published', '1') == '1'
+        pin = int(request.form.get('pin', 0))
+        summary = request.form.get('summary', '').strip() if 'summary' in request.form else ''
+        # 校验
+        if not title or not content:
+            flash('标题和内容不能为空', 'danger')
+            return render_template('post/create.html')
+        # 创建文章
+        post = Post(
+            title=title,
+            content=content,
+            summary=summary,
+            is_published=is_published,
+            is_featured=(pin > 0),
+            author_id=current_user.id,
+            # category和pin字段如模型有则写入
+        )
+        if hasattr(post, 'category'):
+            post.category = category
+        if hasattr(post, 'pin'):
+            post.pin = pin
+        db.session.add(post)
+        db.session.commit()
+        if is_published:
+            flash('文章已发布！', 'success')
+        else:
+            flash('草稿已保存！', 'info')
+        return redirect(url_for('main.post_detail', post_id=post.id))
     return render_template('post/create.html')
 
+# 文章编辑
+@main_bp.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.author_id != current_user.id:
+        flash('无权编辑他人文章', 'danger')
+        return redirect(url_for('main.post_detail', post_id=post.id))
+    if request.method == 'POST':
+        post.title = request.form.get('title', '').strip()
+        post.content = request.form.get('content', '').strip()
+        post.summary = request.form.get('summary', '').strip()
+        db.session.commit()
+        flash('文章已更新', 'success')
+        return redirect(url_for('main.post_detail', post_id=post.id))
+    return render_template('post/edit.html', post=post)
 
 # ===================== 奇妙功能 =====================
 @main_bp.route('/guga')
@@ -135,5 +194,11 @@ def guga():
                            background_image_url=url_for('static', filename='guga/MyGO_background.png'),
                            panel_image_url=url_for('static', filename='guga/gugugaga.png')
                            )
+
+@main_bp.route('/my_posts')
+@login_required
+def my_posts():
+    posts = Post.query.filter_by(author_id=current_user.id).order_by(Post.created_at.desc()).all()
+    return render_template('user/my_posts.html', posts=posts)
 
 
