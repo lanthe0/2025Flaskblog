@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}注册 - 2025FlaskBlog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h3 class="mb-4 text-center text-primary fw-bold">用户注册</h3>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    <form method="post" action="{{ url_for('main.register') }}">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户名" required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">邮箱</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="请输入邮箱" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="请输入密码" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password2" class="form-label">确认密码</label>
+                            <input type="password" class="form-control" id="password2" name="password2" placeholder="请再次输入密码" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">注册</button>
+                        </div>
+                    </form>
+                    <div class="mt-4 text-center">
+                        <span class="text-muted">已有账号？</span>
+                        <a href="{{ url_for('main.login') }}" class="text-primary text-decoration-none">立即登录</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
