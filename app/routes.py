@@ -40,7 +40,7 @@ def login():
             flash('用户名或密码错误', 'danger')
             return redirect(url_for('main.login'))
     # 渲染登录页面
-    return render_template('auth/login.html')
+    return render_template('user/login.html')
 
 # 注册
 @main_bp.route('/register', methods=['GET', 'POST'])
@@ -66,7 +66,7 @@ def register():
         flash('注册成功，请登录', 'success')
         return redirect(url_for('main.login'))
     
-    return render_template('auth/register.html')
+    return render_template('user/register.html')
 
 # 登出
 @main_bp.route('/logout')

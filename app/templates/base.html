@@ -71,6 +71,37 @@
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
+        
+        .login-btn, .register-btn {
+            color: #fff !important;
+            background: linear-gradient(90deg, #6c5ce7 0%, #a29bfe 100%);
+            border-radius: 25px;
+            padding: 0.5rem 2rem;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 2px 8px rgba(108,92,231,0.08);
+            transition: all 0.25s cubic-bezier(.4,2,.6,1);
+            display: inline-block;
+            margin-left: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            border: none;
+        }
+        .login-btn:hover, .login-btn:focus,
+        .register-btn:hover, .register-btn:focus {
+            background: linear-gradient(90deg, #a29bfe 0%, #6c5ce7 100%);
+            color: #fff !important;
+            animation: bounce-tilt 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            text-decoration: none;
+        }
+        @keyframes bounce-tilt {
+            0%   { transform: scale(1) rotate(0deg);}
+            20%  { transform: scale(0.92) rotate(-6deg);}
+            40%  { transform: scale(1.08) rotate(6deg);}
+            60%  { transform: scale(0.98) rotate(-3deg);}
+            80%  { transform: scale(1.03) rotate(2deg);}
+            100% { transform: scale(1) rotate(0deg);}
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -120,10 +151,14 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('main.login') }}">登录</a>
+                            <a class="login-btn btn btn-primary" href="{{ url_for('main.login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i>登录
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="btn btn-primary ms-2" href="{{ url_for('main.register') }}">注册</a>
+                            <a class="register-btn btn btn-primary ms-2" href="{{ url_for('main.register') }}">
+                                <i class="fas fa-user-plus me-1"></i>注册
+                            </a>
                         </li>
                     {% endif %}
                 </ul>
