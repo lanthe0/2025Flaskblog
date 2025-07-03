@@ -1,5 +1,24 @@
 import os
+import yaml
 from datetime import timedelta
+
+def load_yaml_config():
+    # 尝试加载config.yml或config.yaml
+    for filename in ['config.yml', 'config.yaml']:
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    return yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                print(f'Error loading config file: {str(e)}')
+                break
+    # 返回默认配置
+    return {
+        'api_key': os.environ.get('DEEPSEEK_API_KEY'),
+        'base_url': 'https://api.deepseek.com',
+        'model': 'deepseek-chat'
+    }
 
 class Config:
     """应用配置类"""
@@ -19,3 +38,6 @@ class Config:
     
     # 分页配置
     POSTS_PER_PAGE = 10
+    
+    # 从yml读取配置
+    MODEL_CONFIG = load_yaml_config()

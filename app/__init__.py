@@ -23,7 +23,7 @@ def create_app(config_class=Config):
     bcrypt.init_app(app)
     
     # 配置Flask-Login
-    # login_manager.login_view = 'main.login'  # 暂时注释，等创建登录路由后再启用
+    login_manager.login_view = 'main.login'
     login_manager.login_message = '请先登录才能访问此页面。'
     login_manager.login_message_category = 'info'
     
@@ -34,7 +34,8 @@ def create_app(config_class=Config):
         return User.query.get(int(user_id))
     
     # 注册蓝图
-    from app.routes import main_bp
+    from app.routes import main_bp, guga_chat_bp
     app.register_blueprint(main_bp)
+    app.register_blueprint(guga_chat_bp)
     
     return app

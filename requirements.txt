@@ -1,11 +1,23 @@
-Flask==2.3.2
+﻿Flask==2.3.2
+MarkupSafe==2.1.3
+Werkzeug==2.3.7
+Jinja2==3.1.2
+itsdangerous==2.1.2
+
 Flask-SQLAlchemy==3.0.5
+SQLAlchemy==2.0.21
+Flask-Migrate==4.0.5
+
 Flask-Login==0.6.2
 Flask-WTF==1.1.1
-Flask-Migrate==4.0.4
-Flask-Bcrypt==1.0.1
-email-validator==2.0.0
-waitress==2.1.2
+WTForms==3.0.1
+
+openai>=1.0.0
+requests==2.31.0
+
 python-dotenv==1.0.0
-psycopg2-binary==2.9.6  # PostgreSQL支持
-pytest==7.4.0  # 测试依赖
+pyyaml==6.0.1
+click==8.1.6
+
+pytest==7.4.0
+pytest-cov==4.1.0

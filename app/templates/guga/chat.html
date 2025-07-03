@@ -93,6 +93,12 @@
             border-bottom-left-radius: 0;
         }
         
+        .message-content {
+            padding: 0.5rem 0;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
         .message-time {
             font-size: 0.75rem;
             color: #666;
@@ -146,15 +152,12 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-title">
-                <i class="fas fa-comments"></i> 咕嘎Chat
+                <i class="fas fa-comments"></i> 咕咕聊天室
             </div>
             <div class="user-info">
                 {% if current_user.is_authenticated %}
-                    <span><i class="fas fa-user"></i> {{ current_user.username }}</span>
-                    <a href="#" class="btn btn-sm btn-outline-light">登出</a>
-                {% else %}
-                    <a href="{{ url_for('main.login') }}" class="btn btn-sm btn-outline-light">登录</a>
-                    <a href="{{ url_for('main.register') }}" class="btn btn-sm btn-primary">注册</a>
+                <span>{{ current_user.username }}</span>
+                <img src="{{ current_user.avatar_url }}" class="rounded-circle" width="32" height="32">
                 {% endif %}
             </div>
         </div>
@@ -163,16 +166,11 @@
             <!-- 左侧边栏 - 对话历史 -->
             <div class="sidebar">
                 <h5><i class="fas fa-history"></i> 对话历史</h5>
+                <button id="newChatBtn" class="btn btn-primary btn-sm mb-3">
+                    <i class="fas fa-plus"></i> 新对话
+                </button>
                 <div id="chatHistory">
-                    <!-- 预留对话历史接口 -->
-                    <div class="history-item">
-                        <div>今天的对话</div>
-                        <small class="text-muted">2023-11-15</small>
-                    </div>
-                    <div class="history-item">
-                        <div>关于Flask的问题</div>
-                        <small class="text-muted">2023-11-14</small>
-                    </div>
+                    <!-- 对话历史将通过JavaScript动态加载 -->
                 </div>
             </div>
             
@@ -180,17 +178,11 @@
             <div class="chat-area">
                 <div class="chat-messages" id="chatMessages">
                     <!-- 消息将在这里动态添加 -->
-                    <div class="message ai-message">
-                        你...你好，我叫高松灯...
-                        <div class="message-time">系统消息</div>
-                    </div>
                 </div>
                 
                 <div class="input-area">
-                    <input type="text" id="messageInput" placeholder="输入消息..." class="form-control">
-                    <button id="sendButton" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i> 发送
-                    </button>
+                    <input type="text" id="messageInput" placeholder="输入消息...">
+                    <button id="sendButton"><i class="fas fa-paper-plane"></i> 发送</button>
                 </div>
             </div>
         </div>
@@ -199,152 +191,97 @@
     <!-- Bootstrap JS -->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     
-    <script>
-        // 全局变量
+    <!-- 引入模块化JS文件 -->
+    <script type="module">
+        import MessageManager from "{{ url_for('static', filename='js/chat/messageManager.js') }}";
+        import ConversationStore from "{{ url_for('static', filename='js/chat/conversationStore.js') }}";
+        import UIController from "{{ url_for('static', filename='js/chat/uiController.js') }}";
+        
+        // 初始化模块
+        const apiBaseUrl = '/api/chat';
+        const messageManager = new MessageManager(apiBaseUrl);
+        const conversationStore = new ConversationStore();
+        const uiController = new UIController();
+        
+        // 当前会话状态
         let currentConversationId = null;
         
-        // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            {% if current_user.is_authenticated %}
-                // 加载对话历史
-                loadConversationHistory();
-                
-                // 获取当前会话
-                fetch('/api/chat/load?conversation_id={{ conversation.id if conversation else '' }}')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (!data.error) {
-                            currentConversationId = data.conversation_id;
-                            displayMessages(data.messages);
-                        }
-                    });
-            {% endif %}
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 加载历史会话
+            const conversations = await conversationStore.loadConversations();
+            renderConversationHistory(conversations);
             
-            // 页面离开时保存对话
-            window.addEventListener('beforeunload', function() {
-                if (currentConversationId) {
-                    // 可以在这里添加保存逻辑
-                }
+            // 设置UI事件监听
+            uiController.setupEventListeners({
+                onSend: handleSendMessage,
+                onNewConversation: handleNewConversation
             });
+            
+            // 如果有活跃会话则加载
+            if (currentConversationId) {
+                loadConversation(currentConversationId);
+            }
         });
         
-        // 加载对话历史
-        function loadConversationHistory() {
-            fetch('/api/chat/history')
-                .then(response => response.json())
-                .then(data => {
-                    const historyContainer = document.getElementById('chatHistory');
-                    historyContainer.innerHTML = '';
-                    
-                    data.conversations.forEach(conv => {
-                        const item = document.createElement('div');
-                        item.className = 'history-item';
-                        item.innerHTML = `
-                            <div>${conv.title}</div>
-                            <small class="text-muted">${new Date(conv.updated_at).toLocaleString()}</small>
-                            <small class="d-block text-truncate">${conv.last_message}</small>
-                        `;
-                        item.addEventListener('click', () => loadConversation(conv.id));
-                        historyContainer.appendChild(item);
-                    });
-                });
-        }
-        
-        // 加载特定对话
-        function loadConversation(conversationId) {
-            fetch(`/api/chat/load?conversation_id=${conversationId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.error) {
-                        currentConversationId = conversationId;
-                        displayMessages(data.messages);
-                    }
-                });
-        }
-        
-        // 显示消息
-        function displayMessages(messages) {
-            const messagesContainer = document.getElementById('chatMessages');
-            messagesContainer.innerHTML = '';
-            
-            messages.forEach(msg => {
-                const messageElement = document.createElement('div');
-                messageElement.className = `message ${msg.role}-message`;
-                messageElement.innerHTML = `
-                    ${msg.content}
-                    <div class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</div>
-                `;
-                messagesContainer.appendChild(messageElement);
-            });
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-        
-        // 发送消息
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-            
-            if (message && currentConversationId) {
-                fetch('/api/chat/send', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        conversation_id: currentConversationId,
-                        message: message
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // 添加AI回复
-                        addMessage(data.ai_response, 'assistant');
-                    }
-                });
+        // 发送消息处理
+        async function handleSendMessage(message) {
+            try {
+                if (!currentConversationId) {
+                    currentConversationId = await conversationStore.createNewConversation();
+                }
                 
-                // 添加用户消息
-                addMessage(message, 'user');
-                input.value = '';
+                // 显示用户消息
+                uiController.addMessage(message, 'user');
+                
+                // 监听AI响应事件
+                const onMessageChunk = (e) => {
+                    uiController.appendToLastMessage(e.detail.chunk);
+                };
+                document.addEventListener('aiMessageChunk', onMessageChunk);
+                
+                // 发送消息到服务器
+                await messageManager.sendMessage(currentConversationId, message);
+                
+                // 清理事件监听
+                setTimeout(() => {
+                    document.removeEventListener('aiMessageChunk', onMessageChunk);
+                }, 5000);
+                
+            } catch (error) {
+                uiController.showError('发送消息失败: ' + error.message);
             }
         }
         
-        // 添加消息到聊天区域
-        function addMessage(text, role) {
-            const messagesContainer = document.getElementById('chatMessages');
-            const messageElement = document.createElement('div');
-            
-            messageElement.className = `message ${role}-message`;
-            messageElement.innerHTML = `
-                ${text}
-                <div class="message-time">${new Date().toLocaleTimeString()}</div>
-            `;
-            
-            messagesContainer.appendChild(messageElement);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // 处理新建会话
+        async function handleNewConversation() {
+            currentConversationId = await conversationStore.createNewConversation();
+            uiController.clearMessages();
         }
         
-        // 事件监听
-        document.getElementById('sendButton').addEventListener('click', sendMessage);
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendMessage();
-        });
+        // 加载特定会话
+        async function loadConversation(conversationId) {
+            currentConversationId = conversationId;
+            const messages = await messageManager.getMessages(conversationId);
+            uiController.displayMessages(messages);
+        }
         
-        document.getElementById('newChatBtn').addEventListener('click', function() {
-            fetch('/api/chat/new', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    currentConversationId = data.conversation_id;
-                    document.getElementById('chatMessages').innerHTML = '';
-                    loadConversationHistory();
-                }
+        // 渲染会话历史
+        function renderConversationHistory(conversations) {
+            const container = document.getElementById('chatHistory');
+            container.innerHTML = '';
+            
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div>${conv.title}</div>
+                    <small class="text-muted">${new Date(conv.updated_at).toLocaleDateString()}</small>
+                `;
+                item.addEventListener('click', () => loadConversation(conv.id));
+                container.appendChild(item);
             });
-        });
-    </script>
+        }
     </script>
 </body>
 </html>

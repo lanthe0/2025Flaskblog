@@ -100,19 +100,20 @@ class Conversation(db.Model):
     """会话模型"""
     __tablename__ = 'conversations'
     
-    # 1. id: 会话ID
-    # 2. title: 会话标题
-    # 3. created_at: 创建时间
-    # 4. updated_at: 更新时间
-    
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_archived = db.Column(db.Boolean, default=False)
     
     # 关联关系
-    participants = db.relationship('User', secondary='user_conversations', backref=db.backref('conversations', lazy='dynamic'))
-    messages = db.relationship('Message', backref='conversation', lazy='dynamic', cascade='all, delete-orphan')
+    user = db.relationship('User', backref=db.backref('conversations', lazy='dynamic'))
+    messages = db.relationship('Message', 
+                             backref='conversation', 
+                             lazy='dynamic', 
+                             cascade='all, delete-orphan',
+                             order_by='Message.created_at.asc()')
     
     def to_dict(self):
         """转换为字典格式"""
@@ -131,26 +132,15 @@ class Message(db.Model):
     """消息模型"""
     __tablename__ = 'messages'
     
-    # 1. id: 消息ID
-    # 2. content: 消息内容
-    # 3. role: 消息角色(user/assistant/system)
-    # 4. model: 使用的AI模型
-    # 5. parent_id: 父消息ID(实现树形结构)
-    # 6. conversation_id: 关联的会话ID
-    # 7. user_id: 发送用户ID
-    # 8. created_at: 创建时间
-    
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # user/assistant/system
-    model = db.Column(db.String(50), nullable=True)  # 使用的AI模型
-    parent_id = db.Column(db.Integer, db.ForeignKey('messages.id'), nullable=True)
+    role = db.Column(db.String(20), nullable=False)  # user/assistant
+    is_user = db.Column(db.Boolean, default=False)    # 是否为用户消息
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
     # 关联关系
-    parent = db.relationship('Message', remote_side=[id], backref=db.backref('children', lazy='dynamic'))
     user = db.relationship('User', backref=db.backref('messages', lazy='dynamic'))
     
     def to_dict(self):
