@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咕咕聊天室</title>
+    <!-- Bootstrap CSS -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url("{{ url_for('static', filename='guga/MyGO_background.png') }}") no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+        
+        .chat-header {
+            padding: 1rem;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background-color: rgba(245, 245, 245, 0.9);
+            border-right: 1px solid #ddd;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            max-width: 80%;
+            padding: 0.75rem 1.25rem;
+            border-radius: 1.25rem;
+            line-height: 1.4;
+            position: relative;
+        }
+        
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        
+        .ai-message {
+            background-color: #f1f1f1;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+        
+        .message-content {
+            padding: 0.5rem 0;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 0.5rem;
+            text-align: right;
+        }
+        
+        .input-area {
+            padding: 1rem;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        #messageInput {
+            flex: 1;
+            padding: 0.75rem 1.25rem;
+            border: 1px solid #ddd;
+            border-radius: 1.25rem;
+            outline: none;
+        }
+        
+        #sendButton {
+            padding: 0.75rem 1.5rem;
+            background-color: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 1.25rem;
+            cursor: pointer;
+        }
+        
+        #sendButton:hover {
+            background-color: #5d4aec;
+        }
+        
+        .history-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            background-color: white;
+        }
+        
+        .history-item:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-title">
+                <i class="fas fa-comments"></i> 咕咕聊天室
+            </div>
+            <div class="user-info">
+                {% if current_user.is_authenticated %}
+                <span>{{ current_user.username }}</span>
+                <img src="{{ current_user.avatar_url }}" class="rounded-circle" width="32" height="32">
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- 左侧边栏 - 对话历史 -->
+            <div class="sidebar">
+                <h5><i class="fas fa-history"></i> 对话历史</h5>
+                <button id="newChatBtn" class="btn btn-primary btn-sm mb-3">
+                    <i class="fas fa-plus"></i> 新对话
+                </button>
+                <div id="chatHistory">
+                    <!-- 对话历史将通过JavaScript动态加载 -->
+                </div>
+            </div>
+            
+            <!-- 主聊天区域 -->
+            <div class="chat-area">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- 消息将在这里动态添加 -->
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" id="messageInput" placeholder="输入消息...">
+                    <button id="sendButton"><i class="fas fa-paper-plane"></i> 发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    
+    <!-- 引入模块化JS文件 -->
+    <script type="module">
+        import MessageManager from "{{ url_for('static', filename='js/chat/messageManager.js') }}";
+        import ConversationStore from "{{ url_for('static', filename='js/chat/conversationStore.js') }}";
+        import UIController from "{{ url_for('static', filename='js/chat/uiController.js') }}";
+        
+        // 初始化模块
+        const apiBaseUrl = '/api/chat';
+        const messageManager = new MessageManager(apiBaseUrl);
+        const conversationStore = new ConversationStore();
+        const uiController = new UIController();
+        
+        // 当前会话状态
+        let currentConversationId = null;
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 加载历史会话
+            const conversations = await conversationStore.loadConversations();
+            renderConversationHistory(conversations);
+            
+            // 设置UI事件监听
+            uiController.setupEventListeners({
+                onSend: handleSendMessage,
+                onNewConversation: handleNewConversation
+            });
+            
+            // 如果有活跃会话则加载
+            if (currentConversationId) {
+                loadConversation(currentConversationId);
+            }
+        });
+        
+        // 发送消息处理
+        async function handleSendMessage(message) {
+            try {
+                if (!currentConversationId) {
+                    currentConversationId = await conversationStore.createNewConversation();
+                }
+                
+                // 显示用户消息
+                uiController.addMessage(message, 'user');
+                
+                // 监听AI响应事件
+                const onMessageChunk = (e) => {
+                    uiController.appendToLastMessage(e.detail.chunk);
+                };
+                document.addEventListener('aiMessageChunk', onMessageChunk);
+                
+                // 发送消息到服务器
+                await messageManager.sendMessage(currentConversationId, message);
+                
+                // 清理事件监听
+                setTimeout(() => {
+                    document.removeEventListener('aiMessageChunk', onMessageChunk);
+                }, 5000);
+                
+            } catch (error) {
+                uiController.showError('发送消息失败: ' + error.message);
+            }
+        }
+        
+        // 处理新建会话
+        async function handleNewConversation() {
+            currentConversationId = await conversationStore.createNewConversation();
+            uiController.clearMessages();
+        }
+        
+        // 加载特定会话
+        async function loadConversation(conversationId) {
+            currentConversationId = conversationId;
+            const messages = await messageManager.getMessages(conversationId);
+            uiController.displayMessages(messages);
+        }
+        
+        // 渲染会话历史
+        function renderConversationHistory(conversations) {
+            const container = document.getElementById('chatHistory');
+            container.innerHTML = '';
+            
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div>${conv.title}</div>
+                    <small class="text-muted">${new Date(conv.updated_at).toLocaleDateString()}</small>
+                `;
+                item.addEventListener('click', () => loadConversation(conv.id));
+                container.appendChild(item);
+            });
+        }
+    </script>
+</body>
+</html>

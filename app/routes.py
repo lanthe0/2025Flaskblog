@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import current_user, logout_user, login_user, login_required
 from app.models import User, Post
 from app import db
 import markdown
 from flask import Markup
+from app.guga_chat import bp as guga_chat_bp, chat_manager
 
 # 创建蓝图
 main_bp = Blueprint('main', __name__)
@@ -187,18 +188,46 @@ def edit_post(post_id):
         return redirect(url_for('main.post_detail', post_id=post.id))
     return render_template('post/edit.html', post=post)
 
-# ===================== 奇妙功能 =====================
-@main_bp.route('/guga')
-def guga():
-    return render_template('guga/guga.html',
-                           background_image_url=url_for('static', filename='guga/MyGO_background.png'),
-                           panel_image_url=url_for('static', filename='guga/gugugaga.png')
-                           )
-
 @main_bp.route('/my_posts')
 @login_required
 def my_posts():
     posts = Post.query.filter_by(author_id=current_user.id).order_by(Post.created_at.desc()).all()
     return render_template('user/my_posts.html', posts=posts)
+
+# ===================== 奇妙功能 =====================
+@main_bp.route('/guga')
+def guga():
+    return render_template('guga/guga.html',
+                            background_image_url=url_for('static', filename='guga/MyGO_background.png'),
+                            panel_image_url=url_for('static', filename='guga/gugugaga.png')
+                            )
+
+from app.guga_chat import handle_chat_request
+
+@main_bp.route('/guga/chat')
+@login_required
+def guga_chat():
+    # 获取或创建会话
+    conversation = chat_manager.get_or_create_conversation()
+    return render_template('guga/chat.html', 
+        conversation=conversation,
+                         background_image_url=url_for('static', filename='guga/MyGO_background.png'))
+
+@main_bp.route('/guli')
+def guli():
+    text = "灵感菇里菇里菇里瓜恰~\n灵感菇灵感菇~\n"
+    return render_template('guga/guli.html', text=text)
+
+@main_bp.route('/hybridaction/<path:subpath>')
+def handle_hybridaction(subpath):
+    """处理所有/hybridaction开头的请求"""
+    return jsonify({'error': 'Not found'}), 404
+
+@main_bp.route('/guga/None')
+def handle_guga_none():
+    """处理/guga/None请求"""
+    return redirect(url_for('main.guga'))
+
+
 
 
