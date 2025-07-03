@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - 2025FlaskBlog{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/github.min.css') }}">
+<style>
+.article-meta { color: #888; font-size: 0.95em; margin-bottom: 1rem; }
+.article-content { font-size: 1.1em; line-height: 1.8; }
+.article-content pre { background: #f8f9fa; border-radius: 0.4em; padding: 0.8em; }
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadein-up {
+  animation: fadeInUp 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 rounded-4 animate-fadein-up">
+                <div class="card-body p-5">
+                    <h1 class="fw-bold mb-3">{{ post.title }}</h1>
+                    <div class="article-meta mb-3">
+                        <span><i class="fas fa-user me-1"></i>{{ post.author.username }}</span>
+                        <span class="mx-2">|</span>
+                        <span><i class="fas fa-clock me-1"></i>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        {% if post.category %}<span class="mx-2">|</span><span><i class="fas fa-tag me-1"></i>{{ post.category }}</span>{% endif %}
+                        <span class="mx-2">|</span>
+                        <span><i class="fas fa-eye me-1"></i>{{ post.views or 0 }} 阅读</span>
+                        {% if not post.is_published %}
+                        <span class="badge bg-secondary ms-2">草稿</span>
+                        {% endif %}
+                        {% if post.is_featured %}
+                        <span class="badge bg-warning text-dark ms-2">置顶</span>
+                        {% endif %}
+                        {% if current_user.is_authenticated and current_user.id == post.author_id %}
+                            <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary ms-3">编辑</a>
+                        {% endif %}
+                    </div>
+                    {% if post.summary %}
+                    <div class="alert alert-info mb-4">{{ post.summary }}</div>
+                    {% endif %}
+                    <div class="article-content mb-4" id="articleContent">
+                        {{ html_content|safe }}
+                    </div>
+                    <!-- 评论区可后续扩展 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  }
+};
+</script>
+<script src="{{ url_for('static', filename='js/es5/tex-mml-chtml.js') }}"></script>
+{% endblock %}

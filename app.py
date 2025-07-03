@@ -19,8 +19,8 @@ if __name__ == '__main__':
     
     # 获取网络信息
     hostname = socket.gethostname()
-    ipv6_addrs = [addr[4][0] for addr in socket.getaddrinfo(hostname, None, socket.AF_INET6)
-                 if not addr[4][0].startswith('fe80::')]
+    ipv6_addrs = [str(addr[4][0]) for addr in socket.getaddrinfo(hostname, None, socket.AF_INET6)
+                 if not str(addr[4][0]).startswith('fe80::')]
     
     print("\n=== 服务器启动后可通过以下方式访问 ===")
     print(f" - IPv4本地: http://localhost:5000")

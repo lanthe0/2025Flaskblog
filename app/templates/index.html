@@ -11,8 +11,8 @@
                 <h1 class="display-4 fw-bold mb-4">欢迎来到2025FlaskBlog</h1>
                 <p class="lead mb-4">这是介绍文本。</p>
                 <div class="d-flex gap-3">
-                    <a href="#" class="btn btn-light btn-lg px-4">开始写作</a>
-                    <a href="#" class="btn btn-outline-light btn-lg px-4">了解更多</a>
+                    <a href="{{ url_for('main.create_post') }}" class="btn btn-light btn-lg px-4">开始写作</a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-light btn-lg px-4">了解更多</a>
                 </div>
             </div>
             <div class="col-lg-6 text-center">
@@ -79,92 +79,52 @@
                 <p class="text-muted">发现社区中的精彩内容</p>
             </div>
             <div class="col-lg-4 text-lg-end">
-                <a href="#" class="btn btn-primary">查看所有文章</a>
+                <a href="{{ url_for('main.post_list') }}" class="btn btn-primary">查看所有文章</a>
             </div>
         </div>
-        
         <div class="row g-4">
-            <!-- 示例文章卡片 -->
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <img src="https://via.placeholder.com/40x40" class="rounded-circle me-2" alt="作者头像">
-                            <div>
-                                <h6 class="mb-0">张三</h6>
-                                <small class="text-muted">2小时前</small>
+            {% if posts %}
+                {% for post in posts %}
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="text-decoration-none text-dark" style="display:block;height:100%">
+                    <div class="card h-100 card-hover">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="{{ post.author.avatar_url or url_for('static', filename='img/default_avatar.png') }}" class="rounded-circle me-2" alt="作者头像" width="40" height="40">
+                                <div>
+                                    <h6 class="mb-0">{{ post.author.username }}</h6>
+                                    <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
                             </div>
-                        </div>
-                        <h5 class="card-title">如何开始你的编程之旅</h5>
-                        <p class="card-text text-muted">编程是一门艺术，也是一门科学。本文将为你介绍如何从零开始学习编程...</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex gap-2">
-                                <span class="badge bg-primary">编程</span>
-                                <span class="badge bg-secondary">教程</span>
+                            <h5 class="card-title">
+                                {{ post.title }}
+                            </h5>
+                            <div class="card-text text-muted flex-grow-1 article-preview" style="font-size: 0.98em; max-height: 4.5em; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                                {{ post.summary or post.content|striptags|truncate(60, True, '...')|replace('#','')|replace('*','')|replace('_','')|replace('`','')|replace('$','') }}
                             </div>
-                            <div class="d-flex gap-3 text-muted">
-                                <small><i class="fas fa-eye me-1"></i>1.2k</small>
-                                <small><i class="fas fa-heart me-1"></i>45</small>
-                                <small><i class="fas fa-comment me-1"></i>12</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <img src="https://via.placeholder.com/40x40" class="rounded-circle me-2" alt="作者头像">
-                            <div>
-                                <h6 class="mb-0">李四</h6>
-                                <small class="text-muted">5小时前</small>
-                            </div>
-                        </div>
-                        <h5 class="card-title">Flask框架深度解析</h5>
-                        <p class="card-text text-muted">Flask是一个轻量级的Python Web框架，本文将深入探讨其核心概念...</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex gap-2">
-                                <span class="badge bg-primary">Flask</span>
-                                <span class="badge bg-secondary">Python</span>
-                            </div>
-                            <div class="d-flex gap-3 text-muted">
-                                <small><i class="fas fa-eye me-1"></i>856</small>
-                                <small><i class="fas fa-heart me-1"></i>32</small>
-                                <small><i class="fas fa-comment me-1"></i>8</small>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="d-flex gap-2">
+                                    {% if post.category %}<span class="badge bg-primary">{{ post.category }}</span>{% endif %}
+                                    {% if post.is_featured %}<span class="badge bg-warning text-dark">置顶</span>{% endif %}
+                                </div>
+                                <div class="d-flex gap-3 text-muted">
+                                    <small><i class="fas fa-eye me-1"></i>{{ post.views or 0 }}</small>
+                                    <small><i class="fas fa-heart me-1"></i>{{ post.likes|length if post.likes else 0 }}</small>
+                                    <small><i class="fas fa-comment me-1"></i>{{ post.comments|length if post.comments else 0 }}</small>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    </a>
                 </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <img src="https://via.placeholder.com/40x40" class="rounded-circle me-2" alt="作者头像">
-                            <div>
-                                <h6 class="mb-0">王五</h6>
-                                <small class="text-muted">1天前</small>
-                            </div>
-                        </div>
-                        <h5 class="card-title">Bootstrap 5新特性介绍</h5>
-                        <p class="card-text text-muted">Bootstrap 5带来了许多激动人心的新特性，让我们一起来探索...</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex gap-2">
-                                <span class="badge bg-primary">Bootstrap</span>
-                                <span class="badge bg-secondary">前端</span>
-                            </div>
-                            <div class="d-flex gap-3 text-muted">
-                                <small><i class="fas fa-eye me-1"></i>1.5k</small>
-                                <small><i class="fas fa-heart me-1"></i>67</small>
-                                <small><i class="fas fa-comment me-1"></i>23</small>
-                            </div>
-                        </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center mb-0">
+                        暂无文章。
                     </div>
                 </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 </section>
@@ -177,11 +137,33 @@
                 <h2 class="fw-bold mb-4">准备好开始你的博客之旅了吗？</h2>
                 <p class="lead text-muted mb-4">加入我们的社区，分享你的想法，连接志同道合的朋友。</p>
                 <div class="d-flex gap-3 justify-content-center">
-                    <a href="#" class="btn btn-primary btn-lg px-4">立即注册</a>
-                    <a href="#" class="btn btn-outline-primary btn-lg px-4">了解更多</a>
+                    <a href="{{ url_for('main.register') }}" class="btn btn-primary btn-lg px-4">立即注册</a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-primary btn-lg px-4">了解更多</a>
                 </div>
             </div>
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
+<script>
+// 渲染所有文章摘要/内容为Markdown预览
+{% if posts %}
+{% for post in posts %}
+(function() {
+    var raw = {{ (post.summary or post.content[:80] ~ '...')|tojson }};
+    var html = marked.parse(raw);
+    document.getElementById('preview-{{ post.id }}').innerHTML = html;
+    document.querySelectorAll('#preview-{{ post.id }} pre code').forEach((el) => {
+        hljs.highlightElement(el);
+    });
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([document.getElementById('preview-{{ post.id }}')]);
+    }
+})();
+{% endfor %}
+{% endif %}
+</script>
 {% endblock %}
