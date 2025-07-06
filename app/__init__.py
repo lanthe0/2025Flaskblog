@@ -34,7 +34,8 @@ def create_app(config_class=Config):
         return User.query.get(int(user_id))
     
     # 注册蓝图
-    from app.routes import main_bp, guga_chat_bp
+    from app.routes import main_bp
+    from app.guga_chat import guga_chat_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(guga_chat_bp)
     

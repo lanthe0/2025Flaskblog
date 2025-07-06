@@ -4,7 +4,6 @@ from app.models import User, Post
 from app import db
 import markdown
 from flask import Markup
-from app.guga_chat import bp as guga_chat_bp, chat_manager
 
 # 创建蓝图
 main_bp = Blueprint('main', __name__)
@@ -204,14 +203,6 @@ def guga():
 
 from app.guga_chat import handle_chat_request
 
-@main_bp.route('/guga/chat')
-@login_required
-def guga_chat():
-    # 获取或创建会话
-    conversation = chat_manager.get_or_create_conversation()
-    return render_template('guga/chat.html', 
-        conversation=conversation,
-                         background_image_url=url_for('static', filename='guga/MyGO_background.png'))
 
 @main_bp.route('/guli')
 def guli():

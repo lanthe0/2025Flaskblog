@@ -198,16 +198,28 @@
         import UIController from "{{ url_for('static', filename='js/chat/uiController.js') }}";
         
         // 初始化模块
+        console.log('[Main] 开始初始化聊天组件');
         const apiBaseUrl = '/api/chat';
-        const messageManager = new MessageManager(apiBaseUrl);
         const conversationStore = new ConversationStore();
-        const uiController = new UIController();
+        const uiController = new UIController(conversationStore);
+        const messageManager = new MessageManager(apiBaseUrl, uiController);
+        
+        console.log('[Main] 组件初始化完成:', {
+            messageManager: !!messageManager,
+            conversationStore: !!conversationStore,
+            uiController: !!uiController
+        });
         
         // 当前会话状态
         let currentConversationId = null;
         
         // 初始化应用
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('[Main] DOM已加载，设置消息处理器');
+            uiController.setupMessageHandlers({
+                onSend: (message) => handleSendMessage(message),
+                onNewConversation: handleNewConversation
+            });
             // 加载历史会话
             const conversations = await conversationStore.loadConversations();
             renderConversationHistory(conversations);
@@ -255,7 +267,23 @@
         
         // 处理新建会话
         async function handleNewConversation() {
-            currentConversationId = await conversationStore.createNewConversation();
+            try {
+                // 创建新会话
+                currentConversationId = await conversationStore.createNewConversation();
+                
+                // 清空聊天区域
+                document.getElementById('chatMessages').innerHTML = '';
+                
+                // 刷新会话列表
+                const conversations = await conversationStore.loadConversations();
+                renderConversationHistory(conversations);
+                
+                // 聚焦到输入框
+                document.getElementById('messageInput').focus();
+            } catch (error) {
+                console.error('创建新会话失败:', error);
+                uiController.showError('创建新会话失败: ' + error.message);
+            }
             uiController.clearMessages();
         }
         

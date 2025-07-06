@@ -1,5 +1,5 @@
 # API配置
-api_key: "sk-b0073d312e6e4941bc80479f5d18dcb4"  # 替换为你的DeepSeek API Key
+api_key: "sk-0d3b1920ed474ccf9d28efb636bdfbc7"  # 替换为你的DeepSeek API Key
 base_url: "https://api.deepseek.com"
 model: "deepseek-chat"
 
