@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import current_user, logout_user, login_user, login_required
-from app.models import User, Post
+from app.models import User, Post, Comment
 from app import db
+from app.forms import CommentForm, CommentEditForm
 import markdown
 from flask import Markup
 from app.guga_chat import bp as guga_chat_bp, chat_manager
@@ -131,7 +132,10 @@ def post_detail(post_id):
         post.content,
         extensions=['fenced_code', 'codehilite', 'tables', 'toc']
     ))
-    return render_template('post/detail.html', post=post, html_content=html_content)
+    # 只查一级评论
+    comments = Comment.query.filter_by(post_id=post.id, parent_id=None, is_approved=True, is_deleted=False).order_by(Comment.created_at.asc()).all()
+    comment_form = CommentForm()
+    return render_template('post/detail.html', post=post, html_content=html_content, comments=comments, Comment=Comment, comment_form=comment_form)
 
 # 写新文章
 @main_bp.route('/post/create', methods=['GET', 'POST'])
@@ -193,6 +197,90 @@ def edit_post(post_id):
 def my_posts():
     posts = Post.query.filter_by(author_id=current_user.id).order_by(Post.created_at.desc()).all()
     return render_template('user/my_posts.html', posts=posts)
+
+# ===================== 评论相关 =====================
+@main_bp.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    # 只用原生input获取parent_id
+    parent_id = request.form.get('parent_id')
+    if not parent_id or str(parent_id).lower() == 'none':
+        parent_id = None
+    else:
+        try:
+            parent_id = int(parent_id)
+        except Exception:
+            parent_id = None
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('评论内容不能为空', 'danger')
+        return redirect(url_for('main.post_detail', post_id=post_id))
+    # 检查 parent_id 是否为有效的评论
+    if parent_id:
+        parent_comment = Comment.query.get(parent_id)
+        if not parent_comment or parent_comment.post_id != post_id:
+            flash('回复的评论不存在', 'danger')
+            return redirect(url_for('main.post_detail', post_id=post_id))
+    comment = Comment(
+        content=content,
+        author_id=current_user.id,
+        post_id=post_id,
+        parent_id=parent_id,
+        is_reply=bool(parent_id)
+    )
+    db.session.add(comment)
+    db.session.commit()
+    flash('评论发表成功！', 'success')
+    return redirect(url_for('main.post_detail', post_id=post_id))
+
+@main_bp.route('/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_comment(comment_id):
+    """编辑评论"""
+    comment = Comment.query.get_or_404(comment_id)
+    
+    if not comment.can_edit(current_user):
+        flash('无权编辑此评论', 'danger')
+        return redirect(url_for('main.post_detail', post_id=comment.post_id))
+    
+    form = CommentEditForm()
+    
+    if request.method == 'GET':
+        form.content.data = comment.content
+    
+    if form.validate_on_submit():
+        comment.content = form.content.data.strip()
+        db.session.commit()
+        flash('评论已更新', 'success')
+        return redirect(url_for('main.post_detail', post_id=comment.post_id))
+    
+    return render_template('comment/edit.html', form=form, comment=comment)
+
+@main_bp.route('/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    """删除评论"""
+    comment = Comment.query.get_or_404(comment_id)
+    
+    if not comment.can_delete(current_user):
+        flash('无权删除此评论', 'danger')
+        return redirect(url_for('main.post_detail', post_id=comment.post_id))
+    
+    # 软删除
+    comment.is_deleted = True
+    db.session.commit()
+    
+    flash('评论已删除', 'success')
+    return redirect(url_for('main.post_detail', post_id=comment.post_id))
+
+@main_bp.route('/comment/<int:comment_id>/reply', methods=['GET'])
+@login_required
+def reply_comment(comment_id):
+    """回复评论页面"""
+    comment = Comment.query.get_or_404(comment_id)
+    form = CommentForm()
+    form.parent_id.data = comment.id
+    return render_template('comment/reply.html', form=form, comment=comment, post=comment.post)
 
 # ===================== 奇妙功能 =====================
 @main_bp.route('/guga')

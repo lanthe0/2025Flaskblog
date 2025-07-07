@@ -38,4 +38,12 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
     app.register_blueprint(guga_chat_bp)
     
+    # 注册自定义过滤器
+    @app.template_filter('nl2br')
+    def nl2br_filter(text):
+        """将换行符转换为HTML的<br>标签"""
+        if text is None:
+            return ''
+        return text.replace('\n', '<br>')
+    
     return app

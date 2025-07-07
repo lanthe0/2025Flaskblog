@@ -19,6 +19,62 @@
 .animate-fadein-up {
   animation: fadeInUp 0.7s cubic-bezier(0.23, 1, 0.32, 1);
 }
+
+/* 评论区美化样式 */
+.comment-item {
+    transition: all 0.3s ease;
+}
+.comment-item:hover {
+    transform: translateX(2px);
+}
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e9ecef;
+}
+.comment-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+.comment-card {
+    border-left: 3px solid #007bff;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.comment-card:hover {
+    border-left-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+}
+.reply-form {
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+.time-ago {
+    color: #6c757d;
+    font-size: 0.85em;
+}
+.reply-btn {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: color 0.2s ease;
+}
+.reply-btn:hover {
+    color: #0056b3;
+    text-decoration: none;
+}
 </style>
 {% endblock %}
 {% block content %}
@@ -51,7 +107,51 @@
                     <div class="article-content mb-4" id="articleContent">
                         {{ html_content|safe }}
                     </div>
-                    <!-- 评论区可后续扩展 -->
+                    
+                    <!-- 评论区 -->
+                    <div class="comments-section mt-5">
+                        <h4 class="mb-4">
+                            <i class="fas fa-comments me-2"></i>
+                            评论 ({{ post.get_comments_count() }})
+                        </h4>
+                        
+                        <!-- 发表评论 -->
+                        {% if current_user.is_authenticated %}
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-edit me-2"></i>发表评论
+                                </h6>
+                                <form method="POST" action="{{ url_for('main.add_comment', post_id=post.id) }}">
+                                    {{ comment_form.hidden_tag() }}
+                                    <div class="mb-3">
+                                        {{ comment_form.content(class="form-control", rows="3", placeholder="写下你的评论...") }}
+                                        {% if comment_form.content.errors %}
+                                            <div class="text-danger mt-1">
+                                                {% for error in comment_form.content.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    {{ comment_form.submit(class="btn btn-primary") }}
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            请 <a href="{{ url_for('main.login') }}">登录</a> 后发表评论
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 评论列表 -->
+                        <div class="comments-list">
+                            {% for comment in comments %}
+                                {{ render_comment(comment, 0) }}
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -68,4 +168,124 @@ window.MathJax = {
 };
 </script>
 <script src="{{ url_for('static', filename='js/es5/tex-mml-chtml.js') }}"></script>
+<script>
+function showReplyForm(commentId) {
+    document.querySelectorAll('[id^=reply-form-]').forEach(el => {
+        el.style.display = 'none';
+        el.classList.remove('show');
+    });
+    const form = document.getElementById('reply-form-' + commentId);
+    if (form) {
+        form.style.display = 'block';
+        form.classList.add('show');
+        form.querySelector('textarea').focus();
+    }
+}
+
+function hideReplyForm(commentId) {
+    const form = document.getElementById('reply-form-' + commentId);
+    if (form) {
+        form.style.display = 'none';
+        form.classList.remove('show');
+    }
+}
+
+// 时间格式化函数
+function formatTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+        return '刚刚';
+    } else if (diffInSeconds < 3600) {
+        return Math.floor(diffInSeconds / 60) + '分钟前';
+    } else if (diffInSeconds < 86400) {
+        return Math.floor(diffInSeconds / 3600) + '小时前';
+    } else if (diffInSeconds < 2592000) {
+        return Math.floor(diffInSeconds / 86400) + '天前';
+    } else {
+        return date.toLocaleDateString('zh-CN');
+    }
+}
+
+// 页面加载完成后格式化时间
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.time-ago').forEach(function(element) {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (timestamp) {
+            element.textContent = formatTimeAgo(timestamp);
+        }
+    });
+});
+</script>
 {% endblock %}
+
+{% macro render_comment(comment, depth=0) %}
+<div class="comment-item mb-3" style="margin-left: {{ depth * 20 }}px;">
+    <div class="comment-card p-3">
+        <div class="d-flex">
+            <!-- 用户头像 -->
+            <div class="me-3">
+                {% if comment.author.avatar_url %}
+                    <img src="{{ comment.author.avatar_url }}" alt="{{ comment.author.username }}" class="comment-avatar">
+                {% else %}
+                    <div class="comment-avatar-placeholder">
+                        {{ comment.author.username[0].upper() }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- 评论内容 -->
+            <div class="flex-grow-1">
+                <!-- 用户信息和时间 -->
+                <div class="d-flex align-items-center mb-2">
+                    <strong class="me-2">{{ comment.author.username }}</strong>
+                    <span class="time-ago" data-timestamp="{{ comment.created_at.isoformat() }}">
+                        {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </span>
+                </div>
+                
+                <!-- 评论正文 -->
+                <div class="comment-content mb-2">
+                    {{ comment.content|nl2br }}
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="comment-actions">
+                    {% if current_user.is_authenticated %}
+                        <button type="button" class="btn btn-link reply-btn p-0 me-3" onclick="showReplyForm({{ comment.id }})">
+                            <i class="fas fa-reply me-1"></i>回复
+                        </button>
+                    {% endif %}
+                </div>
+                
+                <!-- 回复表单 -->
+                <div id="reply-form-{{ comment.id }}" class="reply-form mt-3 p-3" style="display:none;">
+                    <form method="POST" action="{{ url_for('main.add_comment', post_id=post.id) }}">
+                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                        <div class="mb-2">
+                            <textarea name="content" class="form-control" rows="2" placeholder="回复 @{{ comment.author.username }}..."></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>提交回复
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideReplyForm({{ comment.id }})">
+                                <i class="fas fa-times me-1"></i>取消
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 回复列表 -->
+                {% for reply in comment.replies.filter_by(is_approved=True, is_deleted=False).order_by(Comment.created_at.asc()).all() %}
+                    <div class="mt-3">
+                        {{ render_comment(reply, depth+1) }}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}

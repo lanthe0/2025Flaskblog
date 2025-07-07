@@ -212,6 +212,26 @@ class Post(db.Model):
     is_published = db.Column(db.Boolean, default=True)
     is_featured = db.Column(db.Boolean, default=False)
     is_deleted = db.Column(db.Boolean, default=False)
+    
+    # 关联关系
+    comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+    likes = db.relationship('Like', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def get_comments(self):
+        """获取文章的主评论（非回复）"""
+        return self.comments.filter_by(
+            parent_id=None, 
+            is_approved=True, 
+            is_deleted=False
+        ).order_by(Comment.created_at.desc()).all()
+    
+    def get_comments_count(self):
+        """获取评论总数（包括回复）"""
+        return self.comments.filter_by(is_approved=True, is_deleted=False).count()
+    
+    def get_likes_count(self):
+        """获取点赞数"""
+        return self.likes.count()
 
     def __repr__(self):
         return f'<Post {self.title}>'
@@ -223,10 +243,53 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
-
-    # 通过backref，User和Post模型可直接访问comments
+    
+    # 回复功能
+    parent_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=True)
+    is_reply = db.Column(db.Boolean, default=False)
+    
+    # 状态管理
+    is_approved = db.Column(db.Boolean, default=True)  # 是否审核通过
+    is_deleted = db.Column(db.Boolean, default=False)  # 是否删除
+    
+    # 关联关系
+    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]), lazy='dynamic', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        """转换为字典格式"""
+        return {
+            'id': self.id,
+            'content': self.content,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'author_id': self.author_id,
+            'post_id': self.post_id,
+            'parent_id': self.parent_id,
+            'is_reply': self.is_reply,
+            'is_approved': self.is_approved,
+            'is_deleted': self.is_deleted,
+            'author': {
+                'id': self.author.id,
+                'username': self.author.username,
+                'avatar_url': self.author.avatar_url
+            } if self.author else None,
+            'replies_count': self.replies.count()
+        }
+    
+    def get_replies(self):
+        """获取回复列表"""
+        return self.replies.filter_by(is_approved=True, is_deleted=False).order_by(Comment.created_at.asc()).all()
+    
+    def can_edit(self, user):
+        """检查用户是否可以编辑此评论"""
+        return user and (user.id == self.author_id or user.is_admin)
+    
+    def can_delete(self, user):
+        """检查用户是否可以删除此评论"""
+        return user and (user.id == self.author_id or user.is_admin)
 
     def __repr__(self):
         return f'<Comment {self.id}>'
