@@ -133,7 +133,7 @@ def post_detail(post_id):
         extensions=['fenced_code', 'codehilite', 'tables', 'toc']
     ))
     # 只查一级评论
-    comments = Comment.query.filter_by(post_id=post.id, parent_id=None, is_approved=True, is_deleted=False).order_by(Comment.created_at.asc()).all()
+    comments = list(Comment.query.filter_by(post_id=post.id, parent_id=None, is_approved=True, is_deleted=False).order_by(Comment.created_at.asc()).all())
     comment_form = CommentForm()
     return render_template('post/detail.html', post=post, html_content=html_content, comments=comments, Comment=Comment, comment_form=comment_form)
 
