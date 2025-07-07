@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, Response
 from flask_login import login_required, current_user
 from datetime import datetime
-from . import db
-from .models import User, Conversation, Message, UserConversation
+from app import db
+from app.models import User, Conversation, Message, UserConversation
 from config import Config
 import requests
 from typing import List, Dict, Optional
@@ -34,55 +34,190 @@ class ChatManager:
     
     def get_or_create_conversation(self) -> Conversation:
         """获取或创建用户会话"""
-        # 确保只获取当前用户的会话
-        conversation = db.session.query(Conversation)\
-            .join(UserConversation, Conversation.id == UserConversation.conversation_id)\
-            .filter(UserConversation.user_id == current_user.id)\
-            .order_by(Conversation.updated_at.desc())\
-            .first()
+        print(f"\n[DEBUG] === 开始获取/创建会话 ===")
+        print(f"[DEBUG] 当前用户ID: {current_user.id}")
         
-        if not conversation:
-            print(f"为用户 {current_user.id} 创建新会话...")
-            conversation = self._create_new_conversation()
-        else:
-            print(f"找到现有会话 {conversation.id} 属于用户 {current_user.id}")
+        try:
+            # 确保只获取当前用户的会话
+            print("[DEBUG] 查询用户会话...")
+            conversation = db.session.query(Conversation)\
+                .join(UserConversation, Conversation.id == UserConversation.conversation_id)\
+                .filter(UserConversation.user_id == current_user.id)\
+                .order_by(Conversation.updated_at.desc())\
+                .first()
+            
+            if not conversation:
+                print(f"[DEBUG] 未找到现有会话，将创建新会话")
+                conversation = self._create_new_conversation()
+                print(f"[DEBUG] 新会话创建成功 (ID: {conversation.id})")
+            else:
+                print(f"[DEBUG] 找到现有会话 (ID: {conversation.id})")
+                print(f"[DEBUG] 会话最后更新时间: {conversation.updated_at}")
+                
+            return conversation
+        except Exception as e:
+            print(f"[ERROR] 获取/创建会话失败: {str(e)}")
+            raise
             
         return conversation
     
     def _create_new_conversation(self) -> Conversation:
         """创建新会话"""
-        conversation = Conversation(
-            title=f"新对话 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            user_id=current_user.id
-        )
-        db.session.add(conversation)
-        db.session.commit()
-        
-        # 添加关联关系
-        user_conversation = UserConversation(
-            user_id=current_user.id,
-            conversation_id=conversation.id
-        )
-        db.session.add(user_conversation)
-        db.session.commit()
-        return conversation
+        print("\n[DEBUG] === 创建新会话 ===")
+        try:
+            conversation = Conversation(
+                title=f"新对话 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                user_id=current_user.id
+            )
+            print("[DEBUG] 创建会话实例成功")
+            
+            db.session.add(conversation)
+            print("[DEBUG] 会话已添加到数据库")
+            
+            db.session.commit()
+            print("[DEBUG] 会话提交成功")
+            
+            # 添加关联关系
+            print("[DEBUG] 创建用户会话关联...")
+            user_conversation = UserConversation(
+                user_id=current_user.id,
+                conversation_id=conversation.id
+            )
+            db.session.add(user_conversation)
+            db.session.commit()
+            print("[DEBUG] 用户会话关联提交成功")
+            
+            return conversation
+        except Exception as e:
+            print(f"[ERROR] 创建会话失败: {str(e)}")
+            db.session.rollback()
+            raise
     
     def get_conversation_history(self, conversation_id: int, 
-                               page: int = 1, per_page: int = 10) -> List[Dict]:
+                               page: int = 1, per_page: int = 10,
+                               limit: Optional[int] = None) -> List[Dict]:
         """获取指定会话的历史消息"""
-        messages = Message.query.filter_by(
-            conversation_id=conversation_id
-        ).order_by(Message.created_at.asc()).paginate(page, per_page, False)
+        print(f"\n[DEBUG] === 获取会话历史 ===")
+        print(f"[DEBUG] 会话ID: {conversation_id}")
+        print(f"[DEBUG] 页码: {page} 每页条数: {per_page}")
         
-        from datetime import timezone
-        return [{
-            'id': msg.id,
-            'content': msg.content,
-            'is_user': msg.is_user,
-            'created_at': msg.created_at.replace(tzinfo=timezone.utc).isoformat()
-        } for msg in messages.items]
+        try:
+            # 详细查询条件
+            print("[DEBUG] 执行消息查询...")
+            query = Message.query.filter_by(conversation_id=conversation_id)
+            print(f"[DEBUG] 原始SQL: {str(query)}")
+            
+            if limit:
+                messages = query.order_by(Message.created_at.desc()).limit(limit).all()
+            else:
+                messages = query.order_by(Message.created_at.asc()).paginate(page, per_page, False).items
+            
+            print(f"[DEBUG] 获取到 {len(messages)} 条消息")
+            for i, msg in enumerate(messages):
+                print(f"[DEBUG] 消息{i+1}: ID={msg.id} 类型={'用户' if msg.is_user else 'AI'} 内容={msg.content[:50]}...")
+            
+            from datetime import timezone
+            return [{
+                'id': msg.id,
+                'content': msg.content,
+                'is_user': msg.is_user,
+                'role': 'user' if msg.is_user else 'assistant',
+                'created_at': msg.created_at.replace(tzinfo=timezone.utc).isoformat()
+            } for msg in messages]
+        except Exception as e:
+            print(f"[ERROR] 获取会话历史失败: {str(e)}")
+            raise
     
     from flask import stream_with_context
+
+    def _save_message(self, content: str, is_user: bool, conversation_id: int, user_id=None):
+        """独立保存消息到数据库"""
+        print(f"\n[DEBUG] === 保存消息 ===")
+        print(f"[DEBUG] 会话ID: {conversation_id}")
+        print(f"[DEBUG] 消息类型: {'用户' if is_user else 'AI'}")
+        print(f"[DEBUG] 消息长度: {len(content)} 字符")
+        
+        from app import db
+        from app.models import Message
+        from sqlalchemy import text
+        
+        try:
+            # 创建全新的独立会话
+            print("[DEBUG] 创建全新独立数据库会话...")
+            from sqlalchemy.orm import sessionmaker
+            Session = sessionmaker(bind=db.engine)
+            new_session = Session()
+            print("[DEBUG] 新会话创建成功")
+            
+            # 使用新会话保存消息
+            print("[DEBUG] 创建消息实例...")
+            msg = Message(
+                content=content,
+                role='user' if is_user else 'assistant',
+                is_user=is_user,
+                conversation_id=conversation_id,
+                user_id=user_id
+            )
+            
+            print("[DEBUG] 添加消息到会话...")
+            new_session.add(msg)
+            print("[DEBUG] 提交事务...")
+            new_session.commit()
+            print(f"[DEBUG] 消息保存成功 (ID: {msg.id})")
+            
+            return msg.id
+            
+        except Exception as e:
+            print(f"[CRITICAL] 保存消息失败: {str(e)}")
+            try:
+                new_session.rollback()
+                print("[DEBUG] 已回滚事务")
+            except:
+                print("[DEBUG] 回滚事务失败")
+            raise
+        finally:
+            try:
+                new_session.close()
+                print("[DEBUG] 会话已关闭")
+            except:
+                print("[DEBUG] 关闭会话失败")
+            
+        try:
+            # 检查数据库连接是否可用
+            print("[DEBUG] 正在检查数据库连接...")
+            db.session.execute(text('SELECT 1'))
+            print("[DEBUG] 数据库连接正常")
+            
+            # 创建新消息实例
+            msg = Message(
+                content=content,
+                role='user' if is_user else 'assistant',
+                is_user=is_user,
+                conversation_id=conversation_id,
+                user_id=user_id
+            )
+            
+            # 使用新事务保存消息
+            print("[DEBUG] 开始新事务保存消息...")
+            db.session.begin()
+            db.session.add(msg)
+            db.session.flush()  # 确保ID生成
+            print(f"[DEBUG] 消息已暂存 (ID: {msg.id})")
+            
+            # 验证消息是否保存成功
+            saved_msg = db.session.query(Message).filter_by(id=msg.id).first()
+            if not saved_msg:
+                raise Exception("消息保存后未在数据库中找到")
+                
+            db.session.commit()
+            print("[DEBUG] 事务提交成功，消息已保存")
+            return msg.id
+            
+        except Exception as e:
+            print(f"[CRITICAL] 保存消息失败: {str(e)}")
+            db.session.rollback()
+            print("[DEBUG] 已回滚事务")
+            raise
 
     @stream_with_context
     def stream_ai_response(self, conversation_id: int, user_input: str):
@@ -90,39 +225,67 @@ class ChatManager:
         print(f"\n[ChatManager] 开始处理消息 (会话ID: {conversation_id})")
         print(f"[ChatManager] 用户消息内容: {user_input[:100]}...")
         
-        # 预先保存用户消息
-        print("[ChatManager] 正在保存用户消息到数据库...")
-        user_msg = Message(
-            content=user_input,
-            role='user',
-            is_user=True,
-            conversation_id=conversation_id,
-            user_id=current_user.id if current_user.is_authenticated else None
-        )
-        db.session.add(user_msg)
-        db.session.commit()
+        try:
+            # 预先保存用户消息
+            print("[ChatManager] 正在保存用户消息到数据库...")
+            user_msg_id = self._save_message(
+                content=user_input,
+                is_user=True,
+                conversation_id=conversation_id,
+                user_id=current_user.id if current_user.is_authenticated else None
+            )
+            print(f"[ChatManager] 用户消息保存成功 (ID: {user_msg_id})")
+        except Exception as e:
+            print(f"[ERROR] 保存用户消息失败: {str(e)}")
+            yield f"[系统错误] 保存用户消息失败: {str(e)}"
+            return
         
         # 收集AI响应并流式返回
         print("[ChatManager] 开始生成AI响应...")
         ai_response = []
-        for i, chunk in enumerate(self._generate_ai_response(user_input)):
-            if i % 5 == 0:  # 每5个chunk打印一次进度
-                print(f"[ChatManager] 正在流式生成响应 (已生成: {len(chunk)} 字符)")
-            ai_response.append(chunk)
-            yield chunk
-        
-        # 保存完整AI响应
-        print(f"[ChatManager] 正在保存AI响应 (总长度: {len(ai_response)})")
-        ai_msg = Message(
-            content=''.join(ai_response),
-            role='assistant',
-            is_user=False,
-            conversation_id=conversation_id
-        )
-        db.session.add(ai_msg)
-        db.session.commit()
+        try:
+            for i, chunk in enumerate(self._generate_ai_response(user_input, conversation_id)):
+                if i % 5 == 0:  # 每5个chunk打印一次进度
+                    print(f"[ChatManager] 正在流式生成响应 (已生成: {len(chunk)} 字符)")
+                ai_response.append(chunk)
+                yield chunk
+            
+            # 保存完整AI响应
+            ai_content = ''.join(ai_response)
+            print(f"[ChatManager] 正在保存AI响应 (总长度: {len(ai_content)})")
+            print(f"[DEBUG] AI消息内容预览: {ai_content[:100]}...")
+            
+            try:
+                ai_msg_id = self._save_message(
+                    content=ai_content,
+                    is_user=False,
+                    conversation_id=conversation_id
+                )
+                print(f"[ChatManager] AI消息保存成功 (ID: {ai_msg_id})")
+            except Exception as e:
+                print(f"[ERROR] 保存AI消息失败: {str(e)}")
+                raise
+            
+        except Exception as e:
+            print(f"[ERROR] AI响应生成或保存失败: {str(e)}")
+            # 即使出错也尝试保存已生成的部分
+            if ai_response:
+                try:
+                    ai_msg = Message(
+                        content=''.join(ai_response) + f"\n[系统错误: {str(e)}]",
+                        role='assistant',
+                        is_user=False,
+                        conversation_id=conversation_id
+                    )
+                    db.session.add(ai_msg)
+                    db.session.commit()
+                    print("[ChatManager] 部分AI消息已保存")
+                except Exception as db_error:
+                    print(f"[CRITICAL] 保存部分AI消息失败: {str(db_error)}")
+            
+            yield f"\n[系统错误] AI响应生成失败: {str(e)}"
     
-    def _generate_ai_response(self, prompt: str):
+    def _generate_ai_response(self, prompt: str, conversation_id: int):
         print(f"[ChatManager] 调用AI生成响应 (输入长度: {len(prompt)})")
         """
         调用DeepSeek API生成响应
@@ -143,10 +306,19 @@ class ChatManager:
                 timeout=self.timeout
             )
             
-            # 使用1.0.0+版本的API调用方式
+            # 获取最近5条历史消息作为上下文
+            history = self.get_conversation_history(conversation_id, limit=5)
+            messages = [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in history
+                if "role" in msg and "content" in msg
+            ]
+            messages.append({"role": "user", "content": prompt})
+            
+            # 使用带上下文的API调用
             response = client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 stream=True
             )
             
@@ -231,31 +403,43 @@ def get_messages():
         except ValueError:
             return jsonify({'error': 'conversation_id必须是整数'}), 400
         
-        # 调试日志
-        print(f"尝试获取会话 {conversation_id} 的消息...")
-        print(f"当前用户ID: {current_user.id}")
+        # 详细调试日志
+        print(f"\n[DEBUG] ===== 开始处理消息查询请求 =====")
+        print(f"[DEBUG] 会话ID: {conversation_id}")
+        print(f"[DEBUG] 当前用户ID: {current_user.id}")
         
         # 验证会话存在且属于当前用户
-        print(f"[DEBUG] 验证会话 {conversation_id} 属于用户 {current_user.id}")
+        print(f"[DEBUG] 验证会话所有权...")
         user_conv = db.session.query(UserConversation).filter_by(
             user_id=current_user.id,
             conversation_id=conversation_id
         ).first()
         
         if not user_conv:
-            print(f"[DEBUG] 验证失败: 用户 {current_user.id} 无权访问会话 {conversation_id}")
+            print(f"[ERROR] 验证失败: 用户 {current_user.id} 无权访问会话 {conversation_id}")
             return jsonify({'error': '会话不存在或无权访问'}), 404
         
         print(f"[DEBUG] 验证通过: 会话 {conversation_id} 属于用户 {current_user.id}")
         
-        # 调试SQL查询
-        print(f"[DEBUG] 准备查询会话 {conversation_id} 的消息...")
+        # 详细SQL查询调试
+        print(f"[DEBUG] 执行消息查询...")
         try:
-            messages = Message.query.filter_by(conversation_id=conversation_id).all()
-            print(f"[DEBUG] 查询到 {len(messages)} 条消息")
-            for msg in messages[:3]:  # 打印前3条消息示例
-                print(f"[DEBUG] 消息示例: ID={msg.id}, 内容={msg.content[:50]}...")
+            messages = Message.query.filter_by(conversation_id=conversation_id)\
+                .order_by(Message.created_at.asc()).all()
             
+            print(f"[DEBUG] 查询结果统计:")
+            print(f"总消息数: {len(messages)}")
+            user_msg_count = sum(1 for msg in messages if msg.is_user)
+            ai_msg_count = sum(1 for msg in messages if not msg.is_user)
+            print(f"用户消息: {user_msg_count} 条")
+            print(f"AI消息: {ai_msg_count} 条")
+            
+            print("\n[DEBUG] 消息详情:")
+            for i, msg in enumerate(messages[-5:]):  # 打印最后5条消息
+                print(f"{i+1}. ID={msg.id} | 角色={'用户' if msg.is_user else 'AI'} | "
+                      f"时间={msg.created_at} | 内容={msg.content[:50]}...")
+            
+            print("\n[DEBUG] 准备返回数据...")
             return get_chat_history(conversation_id)
         except Exception as e:
             print(f"[ERROR] 查询消息时出错: {str(e)}")
@@ -265,7 +449,8 @@ def get_messages():
         traceback.print_exc()
         # 检查数据库连接状态
         try:
-            db_status = db.session.execute('SELECT 1').scalar()
+            from sqlalchemy import text
+            db_status = db.session.execute(text('SELECT 1')).scalar()
             print(f"[DEBUG] 数据库连接状态: {'正常' if db_status == 1 else '异常'}")
         except Exception as db_error:
             print("[DEBUG] 数据库连接检查失败:", str(db_error))

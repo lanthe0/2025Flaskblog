@@ -30,12 +30,12 @@ def display_messages(limit=10, page=1):
     with app.app_context():
         print(f"\n=== 聊天记录 (第{page}页，每页{limit}条) ===")
         
-        # 获取消息及关联的会话和用户信息
+        # 获取消息及关联的会话和用户信息（使用outerjoin包含AI消息）
         messages = db.session.query(
             Message, Conversation, User
         ).join(
             Conversation, Message.conversation_id == Conversation.id
-        ).join(
+        ).outerjoin(
             User, Message.user_id == User.id
         ).order_by(
             Message.created_at.desc()
@@ -48,9 +48,9 @@ def display_messages(limit=10, page=1):
         for msg, conv, user in messages.items:
             print(f"\n[消息ID: {msg.id}]")
             print(f"会话: {conv.title} (ID: {conv.id})")
-            print(f"用户: {user.username} (ID: {user.id})")
+            print(f"用户: {user.username if user else 'AI'} (ID: {user.id if user else 'N/A'})")
             print(f"时间: {msg.created_at}")
-            print(f"角色: {msg.role} (用户消息: {'是' if msg.is_user else '否'})")
+            print(f"角色: {msg.role} (类型: {'用户' if msg.role == 'user' else 'AI'})")
             print(f"内容: {msg.content[:200]}{'...' if len(msg.content) > 200 else ''}")
             print("-" * 80)
         
