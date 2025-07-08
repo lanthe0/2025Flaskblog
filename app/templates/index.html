@@ -110,7 +110,16 @@
                                 <div class="d-flex gap-4 text-muted align-items-center fs-6">
                                     <span title="阅读数"><i class="fas fa-eye me-1"></i>{{ post.views or 0 }}</span>
                                     <span title="评论数"><i class="fas fa-comment me-1"></i>{{ post.get_comments_count() }}</span>
-                                    <span title="点赞数"><i class="fas fa-heart me-1"></i>{{ post.get_likes_count() }}</span>
+                                    <span title="点赞数">
+                                        {% if current_user.is_authenticated %}
+                                            <button class="btn btn-sm btn-link p-0 like-btn" data-post-id="{{ post.id }}" title="点赞" onclick="event.preventDefault(); event.stopPropagation();">
+                                                <i class="fas fa-heart like-icon" id="like-icon-{{ post.id }}"></i>
+                                                <span class="like-count" id="like-count-{{ post.id }}">{{ post.get_likes_count() }}</span>
+                                            </button>
+                                        {% else %}
+                                            <i class="fas fa-heart me-1"></i>{{ post.get_likes_count() }}
+                                        {% endif %}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -165,5 +174,69 @@
 })();
 {% endfor %}
 {% endif %}
+
+// 初始化点赞功能
+document.addEventListener('DOMContentLoaded', function() {
+    initLikeButtons();
+});
+
+// 点赞功能
+function initLikeButtons() {
+    const likeButtons = document.querySelectorAll('.like-btn');
+    
+    likeButtons.forEach(btn => {
+        const postId = btn.getAttribute('data-post-id');
+        
+        // 获取初始点赞状态
+        fetch(`/post/${postId}/like/status`)
+            .then(response => response.json())
+            .then(data => {
+                updateLikeButtonState(postId, data.is_liked);
+            })
+            .catch(error => {
+                console.error('获取点赞状态失败:', error);
+            });
+        
+        // 点击事件
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            btn.disabled = true;
+            
+            fetch(`/post/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateLikeButtonState(postId, data.is_liked);
+                    document.getElementById(`like-count-${postId}`).textContent = data.likes_count;
+                }
+            })
+            .catch(error => {
+                console.error('点赞操作失败:', error);
+            })
+            .finally(() => {
+                btn.disabled = false;
+            });
+        });
+    });
+}
+
+function updateLikeButtonState(postId, isLiked) {
+    const likeIcon = document.getElementById(`like-icon-${postId}`);
+    
+    if (isLiked) {
+        likeIcon.classList.remove('text-muted');
+        likeIcon.classList.add('text-danger');
+    } else {
+        likeIcon.classList.remove('text-danger');
+        likeIcon.classList.add('text-muted');
+    }
+}
 </script>
 {% endblock %}
