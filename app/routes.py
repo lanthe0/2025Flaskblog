@@ -1,12 +1,10 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Markup
 from flask_login import current_user, logout_user, login_user, login_required
 from app.models import User, Post, Comment, Like
 from app import db
 from app.forms import CommentForm, CommentEditForm
 import markdown
-from flask import Markup
 
-# 创建蓝图
 main_bp = Blueprint('main', __name__)
 
 # 首页
@@ -14,9 +12,14 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/index')
 def index():
     """首页路由"""
-    # 取最新6篇已发布文章
-    posts = Post.query.filter_by(is_published=True).order_by(Post.created_at.desc()).limit(6).all()
-    return render_template('index.html', posts=posts)
+    # 取最新6篇已发布且未删除文章
+    posts = Post.query.filter_by(is_published=True, is_deleted=False).order_by(Post.created_at.desc()).limit(6).all()
+    # 统计数据
+    user_count = User.query.count()
+    post_count = Post.query.filter_by(is_published=True, is_deleted=False).count()
+    comment_count = Comment.query.count()
+    like_count = Like.query.count()
+    return render_template('index.html', posts=posts, user_count=user_count, post_count=post_count, comment_count=comment_count, like_count=like_count)
 
 # 关于
 @main_bp.route('/about')
@@ -88,7 +91,7 @@ def logout():
 @main_bp.route('/user/<int:user_id>')
 def user_profile(user_id):
     user = User.query.get_or_404(user_id)
-    posts = Post.query.filter_by(author_id=user.id).order_by(Post.created_at.desc()).all()
+    posts = Post.query.filter_by(author_id=user.id, is_deleted=False).order_by(Post.created_at.desc()).all()
     return render_template('user/profile.html', user=user, posts=posts)
 
 # 用户编辑资料
@@ -101,7 +104,7 @@ def user_set(user_id):
 @main_bp.route('/user/<int:user_id>/posts')
 def user_posts(user_id):
     user = User.query.get_or_404(user_id)
-    posts = Post.query.filter_by(author=user).all()
+    posts = Post.query.filter_by(author=user, is_deleted=False).all()
     return render_template('user/posts.html', user=user, posts=posts)
 
 # 用户编辑资料
@@ -125,7 +128,7 @@ def edit_profile(user_id):
 # 文章总览
 @main_bp.route('/post')
 def post_list():
-    posts = Post.query.filter_by(is_published=True).order_by(Post.created_at.desc()).all()
+    posts = Post.query.filter_by(is_published=True, is_deleted=False).order_by(Post.created_at.desc()).all()
     return render_template('post/post.html', posts=posts)
 
 # 文章详情
@@ -190,7 +193,7 @@ def create_post():
 @login_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.author_id != current_user.id:
+    if not post.can_edit_by(current_user):
         flash('无权编辑他人文章', 'danger')
         return redirect(url_for('main.post_detail', post_id=post.id))
     if request.method == 'POST':
@@ -205,7 +208,7 @@ def edit_post(post_id):
 @main_bp.route('/my_posts')
 @login_required
 def my_posts():
-    posts = Post.query.filter_by(author_id=current_user.id).order_by(Post.created_at.desc()).all()
+    posts = Post.query.filter_by(author_id=current_user.id, is_deleted=False).order_by(Post.created_at.desc()).all()
     return render_template('user/my_posts.html', posts=posts)
 
 # ===================== 评论相关 =====================
@@ -271,15 +274,11 @@ def edit_comment(comment_id):
 def delete_comment(comment_id):
     """删除评论"""
     comment = Comment.query.get_or_404(comment_id)
-    
-    if not comment.can_delete(current_user):
+    if not comment.can_delete_by(current_user):
         flash('无权删除此评论', 'danger')
         return redirect(url_for('main.post_detail', post_id=comment.post_id))
-    
-    # 软删除
-    comment.is_deleted = True
+    comment.soft_delete()
     db.session.commit()
-    
     flash('评论已删除', 'success')
     return redirect(url_for('main.post_detail', post_id=comment.post_id))
 
@@ -365,6 +364,22 @@ def get_like_status(post_id):
         'is_liked': is_liked,
         'likes_count': post.get_likes_count()
     })
+
+@main_bp.route('/post/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if not post.can_delete_by(current_user):
+        flash('无权删除此文章', 'danger')
+        return redirect(url_for('main.post_detail', post_id=post.id))
+    # 软删除文章
+    post.is_deleted = True
+    # 递归软删除所有评论
+    for comment in post.comments.filter_by(is_deleted=False).all():
+        comment.soft_delete()
+    db.session.commit()
+    flash('文章及其所有评论已删除', 'success')
+    return redirect(url_for('main.post_list'))
 
 
 

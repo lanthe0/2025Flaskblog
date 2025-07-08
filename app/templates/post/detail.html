@@ -85,7 +85,12 @@
                 <div class="card-body p-5">
                     <h1 class="fw-bold mb-3">{{ post.title }}</h1>
                     <div class="article-meta mb-3">
-                        <span><i class="fas fa-user me-1"></i>{{ post.author.username }}</span>
+                        <a href="{{ url_for('main.user_profile', user_id=post.author.id) }}">
+                            <img src="{{ post.author.avatar_url or url_for('static', filename='img/default_avatar.png') }}" class="rounded-circle me-2" alt="作者头像" width="40" height="40">
+                        </a>
+                        <a href="{{ url_for('main.user_profile', user_id=post.author.id) }}" class="fw-bold text-decoration-none text-dark">
+                            <span><i class="fas fa-user me-1"></i>{{ post.author.username }}</span>
+                        </a>
                         <span class="mx-2">|</span>
                         <span><i class="fas fa-clock me-1"></i>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
                         {% if post.category %}<span class="mx-2">|</span><span><i class="fas fa-tag me-1"></i>{{ post.category }}</span>{% endif %}
@@ -99,8 +104,9 @@
                         {% if post.is_featured %}
                         <span class="badge bg-warning text-dark ms-2">置顶</span>
                         {% endif %}
-                        {% if current_user.is_authenticated and current_user.id == post.author_id %}
+                        {% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.is_admin) %}
                             <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary ms-3">编辑</a>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#deletePostModal">删除</button>
                         {% endif %}
                     </div>
                     
@@ -169,6 +175,29 @@
         </div>
     </div>
 </div>
+
+<!-- 删除确认模态框 -->
+{% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.is_admin) %}
+<div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deletePostModalLabel">确认删除</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        确定要删除该文章及其所有评论吗？
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <form id="deletePostForm" method="POST" action="{{ url_for('main.delete_post', post_id=post.id) }}">
+          <button type="submit" class="btn btn-danger">确认删除</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
@@ -329,20 +358,20 @@ function showToast(message, type = 'info') {
         <div class="d-flex">
             <!-- 用户头像 -->
             <div class="me-3">
-                {% if comment.author.avatar_url %}
-                    <img src="{{ comment.author.avatar_url }}" alt="{{ comment.author.username }}" class="comment-avatar">
-                {% else %}
-                    <div class="comment-avatar-placeholder">
-                        {{ comment.author.username[0].upper() }}
-                    </div>
-                {% endif %}
+                <a href="{{ url_for('main.user_profile', user_id=comment.author.id) }}">
+                    {% if comment.author.avatar_url %}
+                        <img src="{{ comment.author.avatar_url }}" alt="{{ comment.author.username }}" class="comment-avatar">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='img/default_avatar.png') }}" alt="默认头像" class="comment-avatar">
+                    {% endif %}
+                </a>
             </div>
             
             <!-- 评论内容 -->
             <div class="flex-grow-1">
                 <!-- 用户信息和时间 -->
                 <div class="d-flex align-items-center mb-2">
-                    <strong class="me-2">{{ comment.author.username }}</strong>
+                    <a href="{{ url_for('main.user_profile', user_id=comment.author.id) }}" class="fw-bold text-decoration-none text-dark me-2">{{ comment.author.username }}</a>
                     <span class="time-ago" data-timestamp="{{ comment.created_at.isoformat() }}">
                         {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}
                     </span>
@@ -359,6 +388,11 @@ function showToast(message, type = 'info') {
                         <button type="button" class="btn btn-link reply-btn p-0 me-3" onclick="showReplyForm({{ comment.id }})">
                             <i class="fas fa-reply me-1"></i>回复
                         </button>
+                        {% if comment.can_delete_by(current_user) %}
+                        <form method="POST" action="{{ url_for('main.delete_comment', comment_id=comment.id) }}" style="display:inline;" onsubmit="return confirm('确定要删除这条评论吗？');">
+                            <button type="submit" class="btn btn-link text-danger p-0"><i class="fas fa-trash-alt me-1"></i>删除</button>
+                        </form>
+                        {% endif %}
                     {% endif %}
                 </div>
                 
