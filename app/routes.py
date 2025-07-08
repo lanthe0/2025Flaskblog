@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import current_user, logout_user, login_user, login_required
-from app.models import User, Post, Comment
+from app.models import User, Post, Comment, Like
 from app import db
 from app.forms import CommentForm, CommentEditForm
 import markdown
@@ -63,6 +63,11 @@ def register():
         ExistingUser = User.query.filter_by(username=username).first()
         if ExistingUser:
             flash('用户名已存在', 'danger')
+            return redirect(url_for('main.register'))
+        # 检查邮箱是否已存在
+        ExistingEmail = User.query.filter_by(email=email).first()
+        if ExistingEmail:
+            flash('该邮箱已被注册', 'danger')
             return redirect(url_for('main.register'))
         # 创建新用户
         user = User(username=username, email=email, password=password)
@@ -127,6 +132,12 @@ def post_list():
 @main_bp.route('/post/<int:post_id>')
 def post_detail(post_id):
     post = Post.query.get_or_404(post_id)
+    
+    # 增加观看量（排除作者自己访问）
+    if not current_user.is_authenticated or current_user.id != post.author_id:
+        post.views = (post.views or 0) + 1
+        db.session.commit()
+    
     html_content = Markup(markdown.markdown(
         post.content,
         extensions=['fenced_code', 'codehilite', 'tables', 'toc']
@@ -306,6 +317,54 @@ def handle_hybridaction(subpath):
 def handle_guga_none():
     """处理/guga/None请求"""
     return redirect(url_for('main.guga'))
+
+# ===================== 点赞相关 =====================
+@main_bp.route('/post/<int:post_id>/like', methods=['POST'])
+@login_required
+def toggle_like(post_id):
+    """点赞/取消点赞文章"""
+    post = Post.query.get_or_404(post_id)
+    
+    # 检查是否已经点赞
+    existing_like = Like.query.filter_by(
+        author_id=current_user.id,
+        post_id=post_id
+    ).first()
+    
+    if existing_like:
+        # 取消点赞
+        db.session.delete(existing_like)
+        action = 'unliked'
+    else:
+        # 添加点赞
+        like = Like(author_id=current_user.id, post_id=post_id)
+        db.session.add(like)
+        action = 'liked'
+    
+    db.session.commit()
+    
+    # 返回JSON响应
+    return jsonify({
+        'success': True,
+        'action': action,
+        'likes_count': post.get_likes_count(),
+        'is_liked': action == 'liked'
+    })
+
+@main_bp.route('/post/<int:post_id>/like/status')
+@login_required
+def get_like_status(post_id):
+    """获取当前用户的点赞状态"""
+    post = Post.query.get_or_404(post_id)
+    is_liked = Like.query.filter_by(
+        author_id=current_user.id,
+        post_id=post_id
+    ).first() is not None
+    
+    return jsonify({
+        'is_liked': is_liked,
+        'likes_count': post.get_likes_count()
+    })
 
 
 

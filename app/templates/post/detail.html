@@ -91,6 +91,8 @@
                         {% if post.category %}<span class="mx-2">|</span><span><i class="fas fa-tag me-1"></i>{{ post.category }}</span>{% endif %}
                         <span class="mx-2">|</span>
                         <span><i class="fas fa-eye me-1"></i>{{ post.views or 0 }} 阅读</span>
+                        <span class="mx-2">|</span>
+                        <span><i class="fas fa-heart me-1"></i><span id="likes-count">{{ post.get_likes_count() }}</span> 点赞</span>
                         {% if not post.is_published %}
                         <span class="badge bg-secondary ms-2">草稿</span>
                         {% endif %}
@@ -101,6 +103,16 @@
                             <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary ms-3">编辑</a>
                         {% endif %}
                     </div>
+                    
+                    <!-- 点赞按钮 -->
+                    {% if current_user.is_authenticated %}
+                    <div class="mb-4">
+                        <button id="like-btn" class="btn btn-outline-danger" data-post-id="{{ post.id }}">
+                            <i class="fas fa-heart" id="like-icon"></i>
+                            <span id="like-text">点赞</span>
+                        </button>
+                    </div>
+                    {% endif %}
                     {% if post.summary %}
                     <div class="alert alert-info mb-4">{{ post.summary }}</div>
                     {% endif %}
@@ -217,7 +229,97 @@ document.addEventListener('DOMContentLoaded', function() {
             element.textContent = formatTimeAgo(timestamp);
         }
     });
+    
+    // 初始化点赞功能
+    initLikeButton();
 });
+
+// 点赞功能
+function initLikeButton() {
+    const likeBtn = document.getElementById('like-btn');
+    if (!likeBtn) return;
+    
+    const postId = likeBtn.getAttribute('data-post-id');
+    
+    // 获取初始点赞状态
+    fetch(`/post/${postId}/like/status`)
+        .then(response => response.json())
+        .then(data => {
+            updateLikeButton(data.is_liked);
+        })
+        .catch(error => {
+            console.error('获取点赞状态失败:', error);
+        });
+    
+    // 点击事件
+    likeBtn.addEventListener('click', function() {
+        likeBtn.disabled = true;
+        
+        fetch(`/post/${postId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLikeButton(data.is_liked);
+                document.getElementById('likes-count').textContent = data.likes_count;
+                
+                // 显示提示信息
+                const message = data.is_liked ? '点赞成功！' : '已取消点赞';
+                showToast(message, data.is_liked ? 'success' : 'info');
+            }
+        })
+        .catch(error => {
+            console.error('点赞操作失败:', error);
+            showToast('操作失败，请重试', 'error');
+        })
+        .finally(() => {
+            likeBtn.disabled = false;
+        });
+    });
+}
+
+function updateLikeButton(isLiked) {
+    const likeBtn = document.getElementById('like-btn');
+    const likeIcon = document.getElementById('like-icon');
+    const likeText = document.getElementById('like-text');
+    
+    if (isLiked) {
+        likeBtn.classList.remove('btn-outline-danger');
+        likeBtn.classList.add('btn-danger');
+        likeIcon.classList.add('text-white');
+        likeText.textContent = '已点赞';
+    } else {
+        likeBtn.classList.remove('btn-danger');
+        likeBtn.classList.add('btn-outline-danger');
+        likeIcon.classList.remove('text-white');
+        likeText.textContent = '点赞';
+    }
+}
+
+function showToast(message, type = 'info') {
+    // 创建提示元素
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 200px;';
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
 </script>
 {% endblock %}
 
