@@ -113,6 +113,37 @@
             display: flex;
             gap: 0.5rem;
         }
+
+        /* 调试面板样式 */
+        .debug-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 300px;
+            max-height: 200px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .debug-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 5px 10px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            z-index: 1001;
+        }
         
         #messageInput {
             flex: 1;
@@ -186,7 +217,26 @@
                 </div>
             </div>
         </div>
+        /* 调试日志条目样式 */
+        .debug-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 3px;
+        }
+
+        .debug-timestamp {
+            color: #aaa;
+            margin-right: 5px;
+        }
+
+        .debug-message {
+            color: #0f0;
+        }
     </div>
+
+    <!-- 调试面板 -->
+    <div class="debug-panel" id="debugPanel"></div>
+    <button class="debug-toggle" id="debugToggle">调试</button>
 
     <!-- Bootstrap JS -->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>

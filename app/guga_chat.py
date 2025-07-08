@@ -110,7 +110,11 @@ class ChatManager:
             if limit:
                 messages = query.order_by(Message.created_at.desc()).limit(limit).all()
             else:
-                messages = query.order_by(Message.created_at.asc()).paginate(page, per_page, False).items
+                messages = query.order_by(Message.created_at.desc()).paginate(
+                    page=page,
+                    per_page=per_page,
+                    error_out=False
+                ).items
             
             print(f"[DEBUG] 获取到 {len(messages)} 条消息")
             for i, msg in enumerate(messages):
@@ -425,7 +429,7 @@ def get_messages():
         print(f"[DEBUG] 执行消息查询...")
         try:
             messages = Message.query.filter_by(conversation_id=conversation_id)\
-                .order_by(Message.created_at.asc()).all()
+                .order_by(Message.created_at.desc()).all()
             
             print(f"[DEBUG] 查询结果统计:")
             print(f"总消息数: {len(messages)}")
@@ -467,12 +471,21 @@ def list_conversations():
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 10, type=int), 50)
         
+        print(f"\n[DEBUG] === 获取会话列表 ===")
+        print(f"[DEBUG] 当前用户ID: {current_user.id}")
+        print(f"[DEBUG] 页码: {page} 每页条数: {per_page}")
+        
         # 通过UserConversation关联表查询当前用户的会话
         convs = db.session.query(Conversation)\
             .join(UserConversation, Conversation.id == UserConversation.conversation_id)\
             .filter(UserConversation.user_id == current_user.id)\
             .order_by(Conversation.updated_at.desc())\
             .paginate(page=page, per_page=per_page, error_out=False)
+            
+        print(f"[DEBUG] 查询结果: 共 {convs.total} 个会话, {convs.pages} 页")
+        print(f"[DEBUG] 当前页会话数: {len(convs.items)}")
+        for i, conv in enumerate(convs.items):
+            print(f"[DEBUG] 会话{i+1}: ID={conv.id} 标题='{conv.title}' 更新时间={conv.updated_at}")
             
         if not convs.items:
             return jsonify({'conversations': [], 'total': 0, 'pages': 0})
