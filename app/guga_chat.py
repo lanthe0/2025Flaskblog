@@ -110,7 +110,7 @@ class ChatManager:
             if limit:
                 messages = query.order_by(Message.created_at.desc()).limit(limit).all()
             else:
-                messages = query.order_by(Message.created_at.desc()).paginate(
+                messages = query.order_by(Message.created_at.asc()).paginate(
                     page=page,
                     per_page=per_page,
                     error_out=False
@@ -506,17 +506,29 @@ def list_conversations():
 @login_required
 def create_conversation():
     try:
+        print(f"\n[DEBUG] === 创建新会话 ===")
         conv = Conversation(
             title=f"新对话-{datetime.now().strftime('%m-%d %H:%M')}",
             user_id=current_user.id
         )
         db.session.add(conv)
+        db.session.flush()  # 确保ID生成
+        
+        print(f"[DEBUG] 创建用户会话关联...")
+        user_conv = UserConversation(
+            user_id=current_user.id,
+            conversation_id=conv.id
+        )
+        db.session.add(user_conv)
+        
         db.session.commit()
+        print(f"[DEBUG] 新会话创建成功 (ID: {conv.id})")
         return jsonify({
             'id': conv.id,
             'title': conv.title
         }), 201
     except Exception as e:
+        print(f"[ERROR] 创建会话失败: {str(e)}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
