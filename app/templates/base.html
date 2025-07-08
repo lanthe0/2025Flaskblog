@@ -183,6 +183,11 @@
                 
                 <ul class="navbar-nav">
                     {% if current_user.is_authenticated %}
+                        <li class="nav-item d-flex align-items-center">
+                            <a href="{{ url_for('main.user_profile', user_id=current_user.id) }}" class="nav-link p-0 me-2">
+                                <img src="{{ current_user.avatar_url or url_for('static', filename='img/default_avatar.png') }}" alt="头像" class="rounded-circle" width="36" height="36" style="object-fit:cover;">
+                            </a>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user me-1"></i>{{ current_user.username }}
