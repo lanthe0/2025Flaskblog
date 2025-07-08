@@ -83,6 +83,7 @@
 {{ super() }}
 <script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
 <script>
+// 渲染Markdown预览
 function renderPreview() {
     const raw = document.getElementById('content').value;
     const html = marked.parse(raw);
@@ -94,12 +95,40 @@ function renderPreview() {
         window.MathJax.typesetPromise([document.getElementById('mdPreview')]);
     }
 }
-document.getElementById('content').addEventListener('input', renderPreview);
-window.addEventListener('DOMContentLoaded', renderPreview);
+
+// 从URL获取参数并填充表单
+function initFromUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const conversationId = urlParams.get('conversation_id');
+    const content = urlParams.get('content');
+    
+    if (content) {
+        // 解码并填充内容
+        const decodedContent = decodeURIComponent(content);
+        document.getElementById('content').value = decodedContent;
+        
+        // 如果是分享的聊天记录，设置默认标题
+        if (conversationId && !document.getElementById('title').value) {
+            document.getElementById('title').value = `聊天记录分享`;
+        }
+        
+        // 触发预览渲染
+        renderPreview();
+    }
+}
+
+// 保存草稿
 function saveDraft() {
     document.getElementById('public').checked = false;
     document.getElementById('private').checked = true;
     document.getElementById('postForm').submit();
 }
+
+// 初始化事件监听
+document.getElementById('content').addEventListener('input', renderPreview);
+window.addEventListener('DOMContentLoaded', () => {
+    renderPreview();
+    initFromUrlParams();
+});
 </script>
 {% endblock %}

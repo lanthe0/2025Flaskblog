@@ -31,7 +31,7 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     bio = db.Column(db.Text, nullable=True)
-    avatar_url = db.Column(db.String(255), nullable=True, default='/static/img/default_avatar.png')
+    avatar_url = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -212,10 +212,13 @@ class Post(db.Model):
     is_published = db.Column(db.Boolean, default=True)
     is_featured = db.Column(db.Boolean, default=False)
     is_deleted = db.Column(db.Boolean, default=False)
+    is_chat_share = db.Column(db.Boolean, default=False)  # 是否为聊天记录分享
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=True)  # 关联的聊天会话
     
     # 关联关系
     comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     likes = db.relationship('Like', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+    conversation = db.relationship('Conversation', backref='shared_posts')  # 关联的聊天会话
     
     def get_comments(self):
         """获取文章的主评论（非回复）"""
@@ -232,18 +235,6 @@ class Post(db.Model):
     def get_likes_count(self):
         """获取点赞数"""
         return self.likes.count()
-
-    def can_edit_by(self, user):
-        """判断用户是否有权编辑该文章：作者或管理员"""
-        if not user:
-            return False
-        return user.id == self.author_id or user.is_admin
-
-    def can_delete_by(self, user):
-        """判断用户是否有权删除该文章：作者或管理员"""
-        if not user:
-            return False
-        return user.id == self.author_id or user.is_admin
 
     def __repr__(self):
         return f'<Post {self.title}>'
@@ -303,20 +294,8 @@ class Comment(db.Model):
         """检查用户是否可以删除此评论"""
         return user and (user.id == self.author_id or user.is_admin)
 
-    def can_delete_by(self, user):
-        """判断用户是否有权删除该评论：自己、文章作者、管理员"""
-        if not user:
-            return False
-        return user.id == self.author_id or user.id == self.post.author_id or user.is_admin
-
     def __repr__(self):
         return f'<Comment {self.id}>'
-
-    def soft_delete(self):
-        """递归软删除自己和所有子评论"""
-        self.is_deleted = True
-        for reply in self.replies.filter_by(is_deleted=False).all():
-            reply.soft_delete()
 
 class Like(db.Model):
     """点赞模型"""

@@ -161,10 +161,13 @@ def create_post():
         is_published = request.form.get('is_published', '1') == '1'
         pin = int(request.form.get('pin', 0))
         summary = request.form.get('summary', '').strip() if 'summary' in request.form else ''
+        conversation_id = request.form.get('conversation_id')
+        
         # 校验
         if not title or not content:
             flash('标题和内容不能为空', 'danger')
             return render_template('post/create.html')
+        
         # 创建文章
         post = Post(
             title=title,
@@ -175,12 +178,25 @@ def create_post():
             author_id=current_user.id,
             # category和pin字段如模型有则写入
         )
+        
+        # 如果是分享聊天记录
+        if conversation_id:
+            conversation = Conversation.query.get(conversation_id)
+            if conversation and conversation.user_id == current_user.id:
+                post.is_chat_share = True
+                post.conversation_id = conversation.id
+                # 自动生成更好的标题
+                if not title or title == '无标题':
+                    post.title = f"聊天记录: {conversation.title}"
+        
         if hasattr(post, 'category'):
             post.category = category
         if hasattr(post, 'pin'):
             post.pin = pin
+            
         db.session.add(post)
         db.session.commit()
+        
         if is_published:
             flash('文章已发布！', 'success')
         else:

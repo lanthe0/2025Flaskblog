@@ -132,10 +132,30 @@
         }
         
         .message-time {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
             font-size: 0.75rem;
             color: #666;
             margin-top: 0.5rem;
-            text-align: right;
+        }
+        
+        .share-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        
+        .share-btn:hover {
+            background-color: #e9ecef;
         }
         
         .input-area {

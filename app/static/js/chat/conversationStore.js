@@ -60,24 +60,38 @@ export default class ConversationStore {
      * 加载会话消息
      */
     async getMessages(conversationId) {
-        console.log(`[ConversationStore] 开始加载会话 ${conversationId} 的消息`);
+        console.group(`[ConversationStore] 开始加载会话 ${conversationId} 的消息`);
         try {
+            console.log('1. 设置当前会话ID:', conversationId);
+            this.currentConversationId = conversationId;
+            
             const response = await fetch(`/api/chat/messages?conversation_id=${conversationId}`);
-            console.log(`[ConversationStore] 收到会话 ${conversationId} 的响应`);
+            console.log('2. 收到响应:', response);
+            
             if (!response.ok) {
                 const error = await response.json();
-                console.error(`[ConversationStore] 加载会话 ${conversationId} 失败:`, error);
+                console.error('3. 加载失败:', error);
                 throw new Error(error.error || '加载消息失败');
             }
+            
             const data = await response.json();
-            console.log(`[ConversationStore] 会话 ${conversationId} 加载完成，共 ${data.messages?.length || 0} 条消息`);
+            console.log('4. 完整API响应:', JSON.stringify(data, null, 2));
+            
+            // 使用实际存在的字段
+            const processedData = {
+                conversationId: conversationId, // 直接使用传入的conversationId
+                messages: Array.isArray(data) ? data : (data.messages || [])
+            };
+            
+            console.log('5. 处理后数据:', processedData);
+            
             this.eventTarget.dispatchEvent(new CustomEvent('messages-loaded', {
-                detail: {
-                    conversationId,
-                    messages: data.messages
-                }
+                detail: processedData
             }));
-            return data.messages || [];
+            
+            console.log('6. 当前会话ID验证:', this.currentConversationId);
+            console.groupEnd();
+            return processedData.messages;
         } catch (error) {
             this.eventTarget.dispatchEvent(new CustomEvent('error', {
                 detail: error.message

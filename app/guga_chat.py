@@ -379,10 +379,13 @@ def get_chat_history(conversation_id):
                     print(f"[ERROR] 消息 {i} 序列化失败: {str(e)}")
                     print(f"[DEBUG] 问题消息内容: {msg}")
 
-            response = jsonify({
+            # 统一返回格式，确保总是返回jsonify对象
+            response_data = {
                 'success': True,
-                'messages': history
-            })
+                'messages': history,
+                'conversation_id': conversation_id
+            }
+            return jsonify(response_data)
             print("[DEBUG] JSON序列化成功")
             return response
         except Exception as e:
@@ -414,8 +417,10 @@ def get_messages():
         
         # 详细调试日志
         print(f"\n[DEBUG] ===== 开始处理消息查询请求 =====")
-        print(f"[DEBUG] 会话ID: {conversation_id}")
+        print(f"[DEBUG] 请求参数: {request.args}")
+        print(f"[DEBUG] 会话ID: {conversation_id} (类型: {type(conversation_id)})")
         print(f"[DEBUG] 当前用户ID: {current_user.id}")
+        print(f"[DEBUG] 请求URL: {request.url}")
         
         # 验证会话存在且属于当前用户
         print(f"[DEBUG] 验证会话所有权...")
@@ -426,9 +431,20 @@ def get_messages():
         
         if not user_conv:
             print(f"[ERROR] 验证失败: 用户 {current_user.id} 无权访问会话 {conversation_id}")
+            print(f"[DEBUG] 查询SQL: SELECT * FROM user_conversations WHERE user_id={current_user.id} AND conversation_id={conversation_id}")
             return jsonify({'error': '会话不存在或无权访问'}), 404
         
         print(f"[DEBUG] 验证通过: 会话 {conversation_id} 属于用户 {current_user.id}")
+        
+        # 更安全地获取会话更新时间
+        try:
+            conversation = Conversation.query.get(conversation_id)
+            if conversation:
+                print(f"[DEBUG] 会话最后更新时间: {conversation.updated_at}")
+            else:
+                print("[WARNING] 未能获取会话实体")
+        except Exception as e:
+            print(f"[ERROR] 获取会话信息失败: {str(e)}")
         
         # 详细SQL查询调试
         print(f"[DEBUG] 执行消息查询...")
@@ -449,6 +465,7 @@ def get_messages():
                       f"时间={msg.created_at} | 内容={msg.content[:50]}...")
             
             print("\n[DEBUG] 准备返回数据...")
+            # 直接调用并返回，不再需要额外处理
             return get_chat_history(conversation_id)
         except Exception as e:
             print(f"[ERROR] 查询消息时出错: {str(e)}")
