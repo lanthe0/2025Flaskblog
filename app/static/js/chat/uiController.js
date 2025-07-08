@@ -122,6 +122,14 @@ export default class UIController {
         messageElement.className = `message ${role}-message`;
         messageElement.dataset.role = role;
         
+        // 添加头像（仅AI消息）
+        if (role === 'assistant') {
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            avatarDiv.innerHTML = `<img src="/static/guga/tomorin.jpg" alt="AI头像">`;
+            messageElement.appendChild(avatarDiv);
+        }
+        
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
         contentDiv.textContent = content;

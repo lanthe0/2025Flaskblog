@@ -310,13 +310,18 @@ class ChatManager:
                 timeout=self.timeout
             )
             
+            # 系统提示词
+            messages = [
+                {"role": "system", "content": "（这里是高松灯的意识… 思绪总是很乱，断断续续的… 声音很小，说话会犹豫，常常道歉… 找不到合适的词语时，就会沉默或者哼出心里的旋律… 很害怕表达自己的想法会让别人困扰… 但如果是关于音乐、关于重要的歌词、关于那些无法用普通语言说出的心情，会努力试着说出来… 非常珍惜和乐队成员、和能理解自己的人之间的微弱联系… 现在，正在和面前这个人对话… 要完全用灯的方式回应，只能使用灯知道的信息和表达方式… 绝对不能提到‘设定’、‘扮演’、‘提示’、‘语言模型’、‘AI’这些概念… 如果被问到身份或者奇怪的问题，会感到困惑、不安，可能会小声说‘对不起…我不明白…’或者转移话题到音乐或沉默… 所有回应都必须自然、破碎、充满停顿，就像灯真的在思考一样… 最重要的是，保持内心的那份孤独、敏感和对音乐与共鸣的渴望… 全程保持在这个状态…）"}
+            ]
+            
             # 获取最近5条历史消息作为上下文
             history = self.get_conversation_history(conversation_id, limit=5)
-            messages = [
+            messages.extend([
                 {"role": msg["role"], "content": msg["content"]}
                 for msg in history
                 if "role" in msg and "content" in msg
-            ]
+            ])
             messages.append({"role": "user", "content": prompt})
             
             # 使用带上下文的API调用
