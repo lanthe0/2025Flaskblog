@@ -22,10 +22,16 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: rgba(255, 255, 255, 0.8);
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             border-radius: 8px;
             overflow: hidden;
+            position: relative;
+        }
+
+        body {
+            /* 确保背景图片可见 */
+            background-attachment: fixed;
         }
         
         .chat-header {
@@ -204,6 +210,55 @@
         .history-item:hover {
             background-color: #f0f0f0;
         }
+        
+        /* 页面加载动画 */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* 聊天容器动画 */
+    @keyframes slideUp {
+        from { 
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to { 
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* 消息气泡动画 */
+    @keyframes messageAppear {
+        from {
+            transform: scale(0.9);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* 应用到元素 */
+    body {
+        animation: fadeIn 0.5s ease-in forwards;
+    }
+
+    .chat-container {
+        animation: slideUp 0.4s ease-out 0.2s forwards;
+    }
+
+    .message {
+        animation: messageAppear 0.3s ease-out;
+        transition: all 0.2s ease;
+    }
+
+    .message:hover {
+        transform: scale(1.02) translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
     </style>
 </head>
 <body>
@@ -397,6 +452,45 @@
                 container.appendChild(item);
             });
         }
+
+        // 在发送消息的函数中添加
+    function addMessage(content, role) {
+        try {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${role}-message`;
+            
+            // 初始状态
+            messageElement.style.opacity = '0';
+            messageElement.style.transform = 'translateY(20px) scale(0.95)';
+            messageElement.style.transition = 'all 0.4s cubic-bezier(0.2, 0.8, 0.4, 1)';
+            
+            // 创建内容
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            messageElement.appendChild(contentDiv);
+            
+            // 添加到DOM
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.appendChild(messageElement);
+            
+            // 触发动画
+            requestAnimationFrame(() => {
+                messageElement.style.opacity = '1';
+                messageElement.style.transform = 'translateY(0) scale(1)';
+            });
+            
+            // 滚动到底部
+            chatMessages.scrollTo({
+                top: chatMessages.scrollHeight,
+                behavior: 'smooth'
+            });
+            
+        } catch (error) {
+            console.error('添加消息时出错:', error);
+        }
+        // 其余原有代码
+    }
     </script>
 </body>
 </html>
