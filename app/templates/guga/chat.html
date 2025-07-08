@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>咕咕聊天室</title>
+    <title>咕嘎Chat</title>
     <!-- Bootstrap CSS -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- Font Awesome -->
@@ -22,16 +22,30 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background-color: rgba(255, 255, 255, 0.85);
+            background-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .chat-header {
-            padding: 1rem;
-            background-color: rgba(0, 0, 0, 0.9);
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            margin-right: 1rem;
         }
         
         .chat-title {
@@ -53,10 +67,18 @@
         
         .sidebar {
             width: 300px;
-            background-color: rgba(245, 245, 245, 0.9);
-            border-right: 1px solid #ddd;
-            padding: 1rem;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            padding: 1.5rem;
             overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            overflow: hidden;
         }
         
         .chat-area {
@@ -73,24 +95,28 @@
         }
         
         .message {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             max-width: 80%;
-            padding: 0.75rem 1.25rem;
-            border-radius: 1.25rem;
-            line-height: 1.4;
+            padding: 1rem 1.5rem;
+            border-radius: 1.5rem;
+            line-height: 1.5;
             position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
         }
         
         .user-message {
-            background-color: #e3f2fd;
+            background: linear-gradient(135deg, #2575fc 0%, #6a11cb 100%);
+            color: white;
             margin-left: auto;
-            border-bottom-right-radius: 0;
+            border-bottom-right-radius: 0.5rem;
         }
         
         .ai-message {
-            background-color: #f1f1f1;
+            background-color: white;
             margin-right: auto;
-            border-bottom-left-radius: 0;
+            border-bottom-left-radius: 0.5rem;
+            border: 1px solid rgba(0,0,0,0.05);
         }
         
         .message-content {
@@ -107,11 +133,12 @@
         }
         
         .input-area {
-            padding: 1rem;
-            background-color: rgba(255, 255, 255, 0.95);
-            border-top: 1px solid #ddd;
+            padding: 1.5rem;
+            background-color: white;
+            border-top: 1px solid rgba(0,0,0,0.05);
             display: flex;
-            gap: 0.5rem;
+            gap: 1rem;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
 
         /* 调试面板样式 */
@@ -181,17 +208,25 @@
 </head>
 <body>
     <div class="chat-container">
-        <div class="chat-header">
-            <div class="chat-title">
-                <i class="fas fa-comments"></i> 咕咕聊天室
+            <div class="chat-header">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('main.guga') }}" class="btn btn-sm btn-outline-light me-2">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <button class="sidebar-toggle" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="chat-title">
+                        <i class="fas fa-comments"></i> 咕嘎Chat
+                    </div>
+                </div>
+                <div class="user-info">
+                    {% if current_user.is_authenticated %}
+                    <span>{{ current_user.username }}</span>
+                    <img src="{{ current_user.avatar_url }}" class="rounded-circle" width="32" height="32">
+                    {% endif %}
+                </div>
             </div>
-            <div class="user-info">
-                {% if current_user.is_authenticated %}
-                <span>{{ current_user.username }}</span>
-                <img src="{{ current_user.avatar_url }}" class="rounded-circle" width="32" height="32">
-                {% endif %}
-            </div>
-        </div>
         
         <div class="main-content">
             <!-- 左侧边栏 - 对话历史 -->
@@ -247,10 +282,31 @@
         // 初始化应用
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('[Main] DOM已加载，设置消息处理器');
+            
+            // 侧边栏状态管理
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+                sidebarToggle.innerHTML = '<i class="fas fa-angle-double-right"></i>';
+            }
+            
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                const isNowCollapsed = sidebar.classList.contains('collapsed');
+                localStorage.setItem('sidebarCollapsed', isNowCollapsed);
+                sidebarToggle.innerHTML = isNowCollapsed 
+                    ? '<i class="fas fa-angle-double-right"></i>' 
+                    : '<i class="fas fa-bars"></i>';
+            });
+            
             uiController.setupMessageHandlers({
                 onSend: (message) => handleSendMessage(message),
                 onNewConversation: handleNewConversation
             });
+            
             // 加载历史会话
             const conversations = await conversationStore.loadConversations();
             renderConversationHistory(conversations);

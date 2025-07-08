@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>咕咕嘎嘎</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body, html {
             margin: 0;
@@ -48,9 +49,30 @@
         .slide-panel.show {
             bottom: 0;
         }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 110;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-decoration: none;
+            color: #333;
+        }
     </style>
 </head>
 <body>
+    <a href="/" class="back-button" title="返回首页">
+        <i class="fas fa-home"></i>
+    </a>
     <div class="slide-panel" id="slidePanel">
         <div class="text-container" id="textContainer"></div>
         <img src="{{ panel_image_url }}" alt="Panel Image" class="panel-image">
@@ -98,6 +120,7 @@
         .left-panel.show {
             left: 0;
         }
+
     </style>
 
     <script>
