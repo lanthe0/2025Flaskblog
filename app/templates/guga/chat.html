@@ -530,17 +530,6 @@
     </script>
 
     <!-- Live2D 看板娘 -->
-    <script src="https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.0-rc.6/dist/autoload.js"></script>
-    <script>
-        // 手动初始化看板娘
-        window.addEventListener('load', () => {
-            initWidget({
-                waifuPath: 'https://fastly.jsdelivr.net/npm/live2d-widgets@1/dist/waifu-tips.json',
-                cdnPath: 'https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/',
-                modelId: 1, // 使用默认模型
-                logLevel: 'debug' // 开启调试日志
-            });
-        });
-    </script>
+    <script src="/static/live2d/dist/autoload.js"></script>
 </body>
 </html>
