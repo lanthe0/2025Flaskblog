@@ -294,6 +294,9 @@ class Comment(db.Model):
         """检查用户是否可以删除此评论"""
         return user and (user.id == self.author_id or user.is_admin)
 
+    def can_delete_by(self, user):
+        return self.can_delete(user)
+
     def __repr__(self):
         return f'<Comment {self.id}>'
 
