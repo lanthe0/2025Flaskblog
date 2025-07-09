@@ -5,8 +5,7 @@
 
 ### 1. 克隆项目
 ```bash
-# 以命令行为例
- git clone <你的仓库地址>
+ git clone https://github.com/lanthe0/2025Flaskblog.git
  cd 2025flaskblog
 ```
 
@@ -28,4 +27,4 @@ python run_ipv6.py
 
 ---
 
-如遇依赖或数据库问题，请先检查 Python 版本（经过测试，3.8.20与3.11.13均可），并确保 requirements.txt 安装无误。
+如遇依赖或数据库问题，请先检查 Python 版本（经过测试，3.8.20与3.11均可），并确保 requirements.txt 安装无误。
