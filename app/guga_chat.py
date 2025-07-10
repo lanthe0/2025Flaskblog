@@ -577,8 +577,7 @@ def chat_stream():
             chat_manager.stream_ai_response(conv.id, data['message']),
             mimetype='text/event-stream',
             headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive'
+                'Cache-Control': 'no-cache'
             }
         )
 

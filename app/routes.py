@@ -308,8 +308,9 @@ def reply_comment(comment_id):
     return render_template('comment/reply.html', form=form, comment=comment, post=comment.post)
 
 # ===================== 奇妙功能 =====================
-@main_bp.route('/guga')
+@main_bp.route('/guga', strict_slashes=False)
 def guga():
+    """处理/guga和/guga/请求"""
     return render_template('guga/guga.html',
                             background_image_url=url_for('static', filename='guga/MyGO_background.png'),
                             panel_image_url=url_for('static', filename='guga/gugugaga.png')
