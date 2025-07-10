@@ -1,0 +1,6 @@
+# API配置
+api_key: "your_api_key"  # 替换为你的有效DeepSeek API Key
+base_url: "https://api.deepseek.com"
+model: "deepseek-chat"
+
+# 请创建config.yml

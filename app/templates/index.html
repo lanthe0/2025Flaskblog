@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 2025FlaskBlog{% endblock %}
+
+{% block content %}
+<!-- 英雄区域 -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">欢迎来到2025FlaskBlog</h1>
+                <p class="lead mb-4">一个简洁优雅的 Flask 博客平台，支持 Markdown、评论、点赞与个性化社区互动，开启你的创作之旅！</p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('main.create_post') }}" class="btn btn-light btn-lg px-4">开始写作</a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-light btn-lg px-4">了解更多</a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="position-relative">
+                    <div class="bg-white bg-opacity-10 rounded-circle d-inline-block p-5">
+                        <i class="fas fa-pen-fancy fa-6x text-white"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 统计信息 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-white">
+                    <div class="card-body">
+                        <i class="fas fa-users feature-icon"></i>
+                        <h3 class="text-primary fw-bold">{{ user_count }}</h3>
+                        <p class="text-muted mb-0">活跃用户</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-white">
+                    <div class="card-body">
+                        <i class="fas fa-file-alt feature-icon"></i>
+                        <h3 class="text-primary fw-bold">{{ post_count }}</h3>
+                        <p class="text-muted mb-0">发布文章</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-white">
+                    <div class="card-body">
+                        <i class="fas fa-comments feature-icon"></i>
+                        <h3 class="text-primary fw-bold">{{ comment_count }}</h3>
+                        <p class="text-muted mb-0">评论数量</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 bg-white">
+                    <div class="card-body">
+                        <i class="fas fa-heart feature-icon"></i>
+                        <h3 class="text-primary fw-bold">{{ like_count }}</h3>
+                        <p class="text-muted mb-0">点赞总数</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 最新文章 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8">
+                <h2 class="fw-bold">最新文章</h2>
+                <p class="text-muted">发现社区中的精彩内容</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <a href="{{ url_for('main.post_list') }}" class="btn btn-primary">查看所有文章</a>
+            </div>
+        </div>
+        <div class="row g-4">
+            {% if posts %}
+                {% for post in posts %}
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="text-decoration-none text-dark" style="display:block;height:100%">
+                    <div class="card h-100 card-hover">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="{{ post.author.avatar_url or url_for('static', filename='img/default_avatar.png') }}" class="rounded-circle me-2" alt="作者头像" width="40" height="40">
+                                <div>
+                                    <h6 class="mb-0">{{ post.author.username }}</h6>
+                                    <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                            <h5 class="card-title">
+                                {{ post.title }}
+                            </h5>
+                            <div class="card-text text-muted flex-grow-1 article-preview" style="font-size: 0.98em; max-height: 4.5em; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                                {{ post.summary or post.content|striptags|truncate(60, True, '...')|replace('#','')|replace('*','')|replace('_','')|replace('`','')|replace('$','') }}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="d-flex gap-2">
+                                    {% if post.category %}<span class="badge bg-primary">{{ post.category }}</span>{% endif %}
+                                    {% if post.is_featured %}<span class="badge bg-warning text-dark">置顶</span>{% endif %}
+                                </div>
+                                <div class="d-flex gap-4 text-muted align-items-center fs-6">
+                                    <span title="阅读数"><i class="fas fa-eye me-1"></i>{{ post.views or 0 }}</span>
+                                    <span title="评论数"><i class="fas fa-comment me-1"></i>{{ post.get_comments_count() }}</span>
+                                    <span title="点赞数">
+                                        {% if current_user.is_authenticated %}
+                                            <button class="btn btn-sm btn-link p-0 like-btn" data-post-id="{{ post.id }}" title="点赞" onclick="event.preventDefault(); event.stopPropagation();">
+                                                <i class="fas fa-heart like-icon" id="like-icon-{{ post.id }}"></i>
+                                                <span class="like-count" id="like-count-{{ post.id }}">{{ post.get_likes_count() }}</span>
+                                            </button>
+                                        {% else %}
+                                            <i class="fas fa-heart me-1"></i>{{ post.get_likes_count() }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center mb-0">
+                        暂无文章。
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- 加入我们 -->
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="fw-bold mb-4">准备好开始你的博客之旅了吗？</h2>
+                <p class="lead text-muted mb-4">加入我们的社区，分享你的想法，连接志同道合的朋友。</p>
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="{{ url_for('main.register') }}" class="btn btn-primary btn-lg px-4">立即注册</a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-primary btn-lg px-4">了解更多</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
+<script>
+// 渲染所有文章摘要/内容为Markdown预览
+{% if posts %}
+{% for post in posts %}
+(function() {
+    var raw = {{ (post.summary or post.content[:80] ~ '...')|tojson }};
+    var html = marked.parse(raw);
+    document.getElementById('preview-{{ post.id }}').innerHTML = html;
+    document.querySelectorAll('#preview-{{ post.id }} pre code').forEach((el) => {
+        hljs.highlightElement(el);
+    });
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([document.getElementById('preview-{{ post.id }}')]);
+    }
+})();
+{% endfor %}
+{% endif %}
+
+// 初始化点赞功能
+document.addEventListener('DOMContentLoaded', function() {
+    initLikeButtons();
+});
+
+// 点赞功能
+function initLikeButtons() {
+    const likeButtons = document.querySelectorAll('.like-btn');
+    
+    likeButtons.forEach(btn => {
+        const postId = btn.getAttribute('data-post-id');
+        
+        // 获取初始点赞状态
+        fetch(`/post/${postId}/like/status`)
+            .then(response => response.json())
+            .then(data => {
+                updateLikeButtonState(postId, data.is_liked);
+            })
+            .catch(error => {
+                console.error('获取点赞状态失败:', error);
+            });
+        
+        // 点击事件
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            btn.disabled = true;
+            
+            fetch(`/post/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateLikeButtonState(postId, data.is_liked);
+                    document.getElementById(`like-count-${postId}`).textContent = data.likes_count;
+                }
+            })
+            .catch(error => {
+                console.error('点赞操作失败:', error);
+            })
+            .finally(() => {
+                btn.disabled = false;
+            });
+        });
+    });
+}
+
+function updateLikeButtonState(postId, isLiked) {
+    const likeIcon = document.getElementById(`like-icon-${postId}`);
+    
+    if (isLiked) {
+        likeIcon.classList.remove('text-muted');
+        likeIcon.classList.add('text-danger');
+    } else {
+        likeIcon.classList.remove('text-danger');
+        likeIcon.classList.add('text-muted');
+    }
+}
+</script>
+{% endblock %}

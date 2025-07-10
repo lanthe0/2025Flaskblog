@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}关于我们 - 2025FlaskBlog{% endblock %}
+{% block extra_css %}
+<style>
+.about-section {
+    font-size: 1.1em;
+    line-height: 1.8;
+}
+.about-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.profile-image {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadein-up {
+  animation: fadeInUp 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card shadow-sm border-0 rounded-4 animate-fadein-up">
+                <div class="card-body p-5">
+                    <div class="about-header d-flex flex-column align-items-center">
+                        <h1 class="fw-bold mb-3">关于我们</h1>
+                        <p class="text-muted">探索、创造、分享</p>
+                    </div>
+                    <div class="about-section mb-4">
+                        <p>我们是 awa, lanthe0, OL，一个充满激情的开发小组。在这里，我们会记录在编程、生活和学习中的点滴思考与实践，希望能与你一同成长。</p>
+                        <p>我们目前专注于 <strong>Web 开发</strong>，特别是使用 <strong>Python (Flask/Django)</strong> 和 <strong>JavaScript (React/Vue)</strong> 构建高效且用户友好的应用。除了代码，我对人工智能、数据科学以及开源文化也有着浓厚的兴趣。</p>
+                        <p>这个博客是我们分享心得、巩固知识的平台。如果你对文章内容有任何疑问或建议，欢迎随时留言交流。我很乐意倾听不同的声音。</p>
+                        <h3>兴趣</h3>
+                        <ul>
+                            <li>编程与软件开发</li>
+                            <li>阅读与学习新技术</li>
+                            <li>咕咕与嘎嘎</li>
+                        </ul>
+                        <h3>联系我</h3>
+                        <p>如果你想与我取得联系，可以通过以下方式：</p>
+                        <ul>
+                            <li><strong>GitHub:</strong> <a href="https://github.com/lanthe0" target="_blank">github.com/lanthe0</a></li>
+                            <li><strong>GitHub:</strong> <a href="https://github.com/awaxhei" target="_blank">github.com/awaxhei</a></li>
+                            <li><strong>GitHub:</strong> <a href="https://github.com/Orangedog0415" target="_blank">github.com/Orangedog0415</a></li>
+                        </ul>
+                        <p class="text-center mt-4">感谢你的阅读，期待与你在这里相遇！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

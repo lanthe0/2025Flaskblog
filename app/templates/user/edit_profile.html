@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}编辑资料 - {{ user.username }}{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- 左侧：个人信息卡片 -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4 text-center">
+                    <img src="{{ user.avatar_url or url_for('static', filename='img/default_avatar.png') }}" class="rounded-circle mb-3" width="100" height="100" alt="头像">
+                    <h3 class="fw-bold mb-1">{{ user.username }}</h3>
+                    <div class="text-muted small mb-2">
+                        <i class="fas fa-envelope me-1"></i>{{ user.email }}
+                    </div>
+                    <div class="text-muted small mb-2">
+                        <i class="fas fa-calendar-alt me-1"></i>注册于 {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}
+                    </div>
+                    <hr>
+                    <h6 class="fw-bold">个人简介</h6>
+                    <p class="text-muted mb-2">{{ user.bio or '这个人很神秘，什么都没有写~' }}</p>
+                    <div class="row text-center mb-2">
+                        <div class="col-4">
+                            <div class="fw-bold h5 mb-0">{{ user.posts.count() }}</div>
+                            <div class="text-muted small">文章</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold h5 mb-0">{{ user.comments.count() }}</div>
+                            <div class="text-muted small">评论</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold h5 mb-0">{{ user.likes.count() }}</div>
+                            <div class="text-muted small">点赞</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 右侧：编辑资料表单 -->
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h3 class="mb-4 text-primary fw-bold">编辑资料</h3>
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">昵称</label>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ user.username or '' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="avatar_url" class="form-label">头像URL</label>
+                            <input type="url" class="form-control" id="avatar_url" name="avatar_url" value="{{ user.avatar_url or '' }}" placeholder="可粘贴图片链接">
+                        </div>
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">个人简介</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.bio or '' }}</textarea>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">保存修改</button>
+                        </div>
+                    </form>
+                    <div class="mt-4 text-center">
+                        <a href="{{ url_for('main.user_profile', user_id=user.id) }}" class="text-muted text-decoration-none">返回个人主页</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

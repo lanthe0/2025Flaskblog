@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - 2025FlaskBlog{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/github.min.css') }}">
+<style>
+.article-meta { color: #888; font-size: 0.95em; margin-bottom: 1rem; }
+.article-content { font-size: 1.1em; line-height: 1.8; }
+.article-content pre { background: #f8f9fa; border-radius: 0.4em; padding: 0.8em; }
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadein-up {
+  animation: fadeInUp 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* 评论区美化样式 */
+.comment-item {
+    transition: all 0.3s ease;
+}
+.comment-item:hover {
+    transform: translateX(2px);
+}
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e9ecef;
+}
+.comment-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+.comment-card {
+    border-left: 3px solid #007bff;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.comment-card:hover {
+    border-left-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+}
+.reply-form {
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+.time-ago {
+    color: #6c757d;
+    font-size: 0.85em;
+}
+.reply-btn {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: color 0.2s ease;
+}
+.reply-btn:hover {
+    color: #0056b3;
+    text-decoration: none;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 rounded-4 animate-fadein-up">
+                <div class="card-body p-5">
+                    <h1 class="fw-bold mb-3">{{ post.title }}</h1>
+                    <div class="article-meta mb-3">
+                        <a href="{{ url_for('main.user_profile', user_id=post.author.id) }}">
+                            <img src="{{ post.author.avatar_url or url_for('static', filename='img/default_avatar.png') }}" class="rounded-circle me-2" alt="作者头像" width="40" height="40">
+                        </a>
+                        <a href="{{ url_for('main.user_profile', user_id=post.author.id) }}" class="fw-bold text-decoration-none text-dark">
+                            <span><i class="fas fa-user me-1"></i>{{ post.author.username }}</span>
+                        </a>
+                        <span class="mx-2">|</span>
+                        <span><i class="fas fa-clock me-1"></i>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        {% if post.category %}<span class="mx-2">|</span><span><i class="fas fa-tag me-1"></i>{{ post.category }}</span>{% endif %}
+                        <span class="mx-2">|</span>
+                        <span><i class="fas fa-eye me-1"></i>{{ post.views or 0 }} 阅读</span>
+                        <span class="mx-2">|</span>
+                        <span><i class="fas fa-heart me-1"></i><span id="likes-count">{{ post.get_likes_count() }}</span> 点赞</span>
+                        {% if not post.is_published %}
+                        <span class="badge bg-secondary ms-2">草稿</span>
+                        {% endif %}
+                        {% if post.is_featured %}
+                        <span class="badge bg-warning text-dark ms-2">置顶</span>
+                        {% endif %}
+                        {% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.is_admin) %}
+                            <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary ms-3">编辑</a>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#deletePostModal">删除</button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- 点赞按钮 -->
+                    {% if current_user.is_authenticated %}
+                    <div class="mb-4">
+                        <button id="like-btn" class="btn btn-outline-danger" data-post-id="{{ post.id }}">
+                            <i class="fas fa-heart" id="like-icon"></i>
+                            <span id="like-text">点赞</span>
+                        </button>
+                    </div>
+                    {% endif %}
+                    {% if post.summary %}
+                    <div class="alert alert-info mb-4">{{ post.summary }}</div>
+                    {% endif %}
+                    <div class="article-content mb-4" id="articleContent">
+                        {{ html_content|safe }}
+                    </div>
+                    
+                    <!-- 评论区 -->
+                    <div class="comments-section mt-5">
+                        <h4 class="mb-4">
+                            <i class="fas fa-comments me-2"></i>
+                            评论 ({{ comments|length }})
+                        </h4>
+                        
+                        <!-- 发表评论 -->
+                        {% if current_user.is_authenticated %}
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-edit me-2"></i>发表评论
+                                </h6>
+                                <form method="POST" action="{{ url_for('main.add_comment', post_id=post.id) }}">
+                                    {{ comment_form.hidden_tag() }}
+                                    <div class="mb-3">
+                                        {{ comment_form.content(class="form-control", rows="3", placeholder="写下你的评论...") }}
+                                        {% if comment_form.content.errors %}
+                                            <div class="text-danger mt-1">
+                                                {% for error in comment_form.content.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    {{ comment_form.submit(class="btn btn-primary") }}
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            请 <a href="{{ url_for('main.login') }}">登录</a> 后发表评论
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 评论列表 -->
+                        <div class="comments-list">
+                            {% for comment in comments %}
+                                {{ render_comment(comment, 0) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+{% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.is_admin) %}
+<div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deletePostModalLabel">确认删除</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        确定要删除该文章及其所有评论吗？
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <form id="deletePostForm" method="POST" action="{{ url_for('main.delete_post', post_id=post.id) }}">
+          <button type="submit" class="btn btn-danger">确认删除</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  }
+};
+</script>
+<script src="{{ url_for('static', filename='js/es5/tex-mml-chtml.js') }}"></script>
+<script>
+function showReplyForm(commentId) {
+    document.querySelectorAll('[id^=reply-form-]').forEach(el => {
+        el.style.display = 'none';
+        el.classList.remove('show');
+    });
+    const form = document.getElementById('reply-form-' + commentId);
+    if (form) {
+        form.style.display = 'block';
+        form.classList.add('show');
+        form.querySelector('textarea').focus();
+    }
+}
+
+function hideReplyForm(commentId) {
+    const form = document.getElementById('reply-form-' + commentId);
+    if (form) {
+        form.style.display = 'none';
+        form.classList.remove('show');
+    }
+}
+
+// 时间格式化函数
+function formatTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+        return '刚刚';
+    } else if (diffInSeconds < 3600) {
+        return Math.floor(diffInSeconds / 60) + '分钟前';
+    } else if (diffInSeconds < 86400) {
+        return Math.floor(diffInSeconds / 3600) + '小时前';
+    } else if (diffInSeconds < 2592000) {
+        return Math.floor(diffInSeconds / 86400) + '天前';
+    } else {
+        return date.toLocaleDateString('zh-CN');
+    }
+}
+
+// 页面加载完成后格式化时间
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.time-ago').forEach(function(element) {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (timestamp) {
+            element.textContent = formatTimeAgo(timestamp);
+        }
+    });
+    
+    // 初始化点赞功能
+    initLikeButton();
+});
+
+// 点赞功能
+function initLikeButton() {
+    const likeBtn = document.getElementById('like-btn');
+    if (!likeBtn) return;
+    
+    const postId = likeBtn.getAttribute('data-post-id');
+    
+    // 获取初始点赞状态
+    fetch(`/post/${postId}/like/status`)
+        .then(response => response.json())
+        .then(data => {
+            updateLikeButton(data.is_liked);
+        })
+        .catch(error => {
+            console.error('获取点赞状态失败:', error);
+        });
+    
+    // 点击事件
+    likeBtn.addEventListener('click', function() {
+        likeBtn.disabled = true;
+        
+        fetch(`/post/${postId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLikeButton(data.is_liked);
+                document.getElementById('likes-count').textContent = data.likes_count;
+                
+                // 显示提示信息
+                const message = data.is_liked ? '点赞成功！' : '已取消点赞';
+                showToast(message, data.is_liked ? 'success' : 'info');
+            }
+        })
+        .catch(error => {
+            console.error('点赞操作失败:', error);
+            showToast('操作失败，请重试', 'error');
+        })
+        .finally(() => {
+            likeBtn.disabled = false;
+        });
+    });
+}
+
+function updateLikeButton(isLiked) {
+    const likeBtn = document.getElementById('like-btn');
+    const likeIcon = document.getElementById('like-icon');
+    const likeText = document.getElementById('like-text');
+    
+    if (isLiked) {
+        likeBtn.classList.remove('btn-outline-danger');
+        likeBtn.classList.add('btn-danger');
+        likeIcon.classList.add('text-white');
+        likeText.textContent = '已点赞';
+    } else {
+        likeBtn.classList.remove('btn-danger');
+        likeBtn.classList.add('btn-outline-danger');
+        likeIcon.classList.remove('text-white');
+        likeText.textContent = '点赞';
+    }
+}
+
+function showToast(message, type = 'info') {
+    // 创建提示元素
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 200px;';
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}
+
+{% macro render_comment(comment, depth=0) %}
+<div class="comment-item mb-3" style="margin-left: {{ depth * 20 }}px;">
+    <div class="comment-card p-3">
+        <div class="d-flex">
+            <!-- 用户头像 -->
+            <div class="me-3">
+                <a href="{{ url_for('main.user_profile', user_id=comment.author.id) }}">
+                    {% if comment.author.avatar_url %}
+                        <img src="{{ comment.author.avatar_url }}" alt="{{ comment.author.username }}" class="comment-avatar">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='img/default_avatar.png') }}" alt="默认头像" class="comment-avatar">
+                    {% endif %}
+                </a>
+            </div>
+            
+            <!-- 评论内容 -->
+            <div class="flex-grow-1">
+                <!-- 用户信息和时间 -->
+                <div class="d-flex align-items-center mb-2">
+                    <a href="{{ url_for('main.user_profile', user_id=comment.author.id) }}" class="fw-bold text-decoration-none text-dark me-2">{{ comment.author.username }}</a>
+                    <span class="time-ago" data-timestamp="{{ comment.created_at.isoformat() }}">
+                        {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </span>
+                </div>
+                
+                <!-- 评论正文 -->
+                <div class="comment-content mb-2">
+                    {{ comment.content|nl2br }}
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="comment-actions">
+                    {% if current_user.is_authenticated %}
+                        <button type="button" class="btn btn-link reply-btn p-0 me-3" onclick="showReplyForm({{ comment.id }})">
+                            <i class="fas fa-reply me-1"></i>回复
+                        </button>
+                        {% if comment.can_delete_by(current_user) %}
+                        <form method="POST" action="{{ url_for('main.delete_comment', comment_id=comment.id) }}" style="display:inline;" onsubmit="return confirm('确定要删除这条评论吗？');">
+                            <button type="submit" class="btn btn-link text-danger p-0"><i class="fas fa-trash-alt me-1"></i>删除</button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                
+                <!-- 回复表单 -->
+                <div id="reply-form-{{ comment.id }}" class="reply-form mt-3 p-3" style="display:none;">
+                    <form method="POST" action="{{ url_for('main.add_comment', post_id=post.id) }}">
+                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                        <div class="mb-2">
+                            <textarea name="content" class="form-control" rows="2" placeholder="回复 @{{ comment.author.username }}..."></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>提交回复
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideReplyForm({{ comment.id }})">
+                                <i class="fas fa-times me-1"></i>取消
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 回复列表 -->
+                {% for reply in comment.replies.filter_by(is_approved=True, is_deleted=False).order_by(Comment.created_at.asc()).all() %}
+                    <div class="mt-3">
+                        {{ render_comment(reply, depth+1) }}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}

@@ -1,0 +1,7 @@
+# API配置
+api_key: "sk-0d3b1920ed474ccf9d28efb636bdfbc7"  # 替换为你的DeepSeek API Key
+base_url: "https://api.deepseek.com"
+model: "deepseek-chat"
+
+# 注意：不要将此文件提交到版本控制
+# 请创建config.local.yml用于本地开发

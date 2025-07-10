@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>咕咕嘎嘎</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: url("{{ background_image_url }}") no-repeat center center fixed;
+            background-size: cover;
+            cursor: pointer;
+        }
+        .slide-panel {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            height: 90%;
+            background: rgba(255, 255, 255, 0.8);
+            transition: bottom 0.5s ease;
+            z-index: 100;
+            overflow: hidden;
+            padding-bottom: 20px;
+        }
+        @keyframes shake {
+            0% { transform: translateX(-50%) rotate(0deg); }
+            25% { transform: translateX(-50%) rotate(5deg); }
+            50% { transform: translateX(-50%) rotate(-5deg); }
+            75% { transform: translateX(-50%) rotate(5deg); }
+            100% { transform: translateX(-50%) rotate(0deg); }
+        }
+        .panel-image {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 50%;
+            max-height: 50%;
+            object-fit: contain;
+            animation: shake 0.5s infinite;
+        }
+        .slide-panel:not(.show) .panel-image {
+            animation: none;
+        }
+        .slide-panel.show {
+            bottom: 0;
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 110;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-decoration: none;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-button" title="返回首页">
+        <i class="fas fa-home"></i>
+    </a>
+    <div class="slide-panel" id="slidePanel">
+        <div class="text-container" id="textContainer"></div>
+        <img src="{{ panel_image_url }}" alt="Panel Image" class="panel-image">
+    </div>
+
+    <div class="left-panel" id="leftPanel">
+        <div class="panel-title">点击开始对话</div>
+    </div>
+
+    <style>
+        .text-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 80px;
+            overflow: hidden;
+            font-family: monospace;
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1.5;
+            color: #333;
+        }
+        .typewriter-text {
+            display: inline;
+        }
+        .left-panel {
+            position: fixed;
+            left: -100%;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            transition: left 0.5s ease;
+            z-index: 101;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .panel-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.8);
+        }
+        .left-panel.show {
+            left: 0;
+        }
+
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const body = document.querySelector('body');
+            const slidePanel = document.getElementById('slidePanel');
+            const leftPanel = document.getElementById('leftPanel');
+            const textContainer = document.getElementById('textContainer');
+            let lastScrollTime = 0;
+            let isTyping = false;
+            
+            body.addEventListener('wheel', function(e) {
+                const now = Date.now();
+                if (now - lastScrollTime < 200) return;
+                lastScrollTime = now;
+                
+                if (e.deltaY < 0) {
+                    slidePanel.classList.add('show');
+                    if (!isTyping) {
+                        typeWriterEffect();
+                        isTyping = true;
+                    }
+                } else {
+                    slidePanel.classList.remove('show');
+                    textContainer.innerHTML = '';
+                    isTyping = false;
+                }
+            });
+
+            // 全局点击触发左侧面板
+            body.addEventListener('click', function(e) {
+                // 排除面板自身的点击
+                if (e.target.closest('.left-panel') || e.target.closest('.slide-panel')) return;
+                
+                // 检查是否在/guga路径
+                if (window.location.pathname.includes('/guga')) {
+                    if (slidePanel.classList.contains('show')) {
+                        slidePanel.classList.remove('show');
+                        setTimeout(() => {
+                            leftPanel.classList.add('show');
+                        }, 500);
+                    } else {
+                        leftPanel.classList.toggle('show');
+                    }
+                }
+            });
+
+            leftPanel.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                leftPanel.classList.remove('show');
+            });
+
+            leftPanel.addEventListener('click', function(e) {
+                if (e.button === 0) { // Left click
+                    window.location.href = '/guga/chat';
+                }
+            });
+
+            // Disable wheel when left panel is shown
+            body.addEventListener('wheel', function(e) {
+                if (leftPanel.classList.contains('show')) {
+                    return;
+                }
+                
+                const now = Date.now();
+                if (now - lastScrollTime < 200) return;
+                lastScrollTime = now;
+                
+                if (e.deltaY < 0) {
+                    slidePanel.classList.add('show');
+                    if (!isTyping) {
+                        typeWriterEffect();
+                        isTyping = true;
+                    }
+                } else {
+                    slidePanel.classList.remove('show');
+                    textContainer.innerHTML = '';
+                    isTyping = false;
+                }
+            });
+
+            function typeWriterEffect() {
+                const text = "gugugaga ".repeat(100);
+                let i = 0;
+                const speed = 50; // 打字速度(毫秒)
+                
+                function type() {
+                    if (i < text.length) {
+                        textContainer.innerHTML += text.charAt(i);
+                        i++;
+                        setTimeout(type, speed);
+                    }
+                }
+                
+                type();
+            }
+        });
+    </script>
+</body>
+</html>
