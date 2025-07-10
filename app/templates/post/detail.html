@@ -122,7 +122,7 @@
                     {% if post.summary %}
                     <div class="alert alert-info mb-4">{{ post.summary }}</div>
                     {% endif %}
-                    <div class="article-content mb-4" id="articleContent">
+                    <div class="article-content mb-4 tex2jax_process" id="articleContent">
                         {{ html_content|safe }}
                     </div>
                     
@@ -200,16 +200,9 @@
 {% endif %}
 {% endblock %}
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+{{ super() }}
 <script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['$', '$'], ['\\(', '\\)']]
-  }
-};
-</script>
-<script src="{{ url_for('static', filename='js/es5/tex-mml-chtml.js') }}"></script>
-<script>
+// Logic for comment reply forms
 function showReplyForm(commentId) {
     document.querySelectorAll('[id^=reply-form-]').forEach(el => {
         el.style.display = 'none';
@@ -231,87 +224,33 @@ function hideReplyForm(commentId) {
     }
 }
 
-// 时间格式化函数
+// Helper function to format time from ISO string
 function formatTimeAgo(dateString) {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
     
-    if (diffInSeconds < 60) {
-        return '刚刚';
-    } else if (diffInSeconds < 3600) {
-        return Math.floor(diffInSeconds / 60) + '分钟前';
-    } else if (diffInSeconds < 86400) {
-        return Math.floor(diffInSeconds / 3600) + '小时前';
-    } else if (diffInSeconds < 2592000) {
-        return Math.floor(diffInSeconds / 86400) + '天前';
-    } else {
-        return date.toLocaleDateString('zh-CN');
-    }
+    if (diffInSeconds < 60) { return '刚刚'; }
+    if (diffInSeconds < 3600) { return Math.floor(diffInSeconds / 60) + '分钟前'; }
+    if (diffInSeconds < 86400) { return Math.floor(diffInSeconds / 3600) + '小时前'; }
+    if (diffInSeconds < 2592000) { return Math.floor(diffInSeconds / 86400) + '天前'; }
+    return date.toLocaleDateString('zh-CN');
 }
 
-// 页面加载完成后格式化时间
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.time-ago').forEach(function(element) {
-        const timestamp = element.getAttribute('data-timestamp');
-        if (timestamp) {
-            element.textContent = formatTimeAgo(timestamp);
-        }
-    });
-    
-    // 初始化点赞功能
-    initLikeButton();
-});
-
-// 点赞功能
-function initLikeButton() {
-    const likeBtn = document.getElementById('like-btn');
-    if (!likeBtn) return;
-    
-    const postId = likeBtn.getAttribute('data-post-id');
-    
-    // 获取初始点赞状态
-    fetch(`/post/${postId}/like/status`)
-        .then(response => response.json())
-        .then(data => {
-            updateLikeButton(data.is_liked);
-        })
-        .catch(error => {
-            console.error('获取点赞状态失败:', error);
-        });
-    
-    // 点击事件
-    likeBtn.addEventListener('click', function() {
-        likeBtn.disabled = true;
-        
-        fetch(`/post/${postId}/like`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateLikeButton(data.is_liked);
-                document.getElementById('likes-count').textContent = data.likes_count;
-                
-                // 显示提示信息
-                const message = data.is_liked ? '点赞成功！' : '已取消点赞';
-                showToast(message, data.is_liked ? 'success' : 'info');
-            }
-        })
-        .catch(error => {
-            console.error('点赞操作失败:', error);
-            showToast('操作失败，请重试', 'error');
-        })
-        .finally(() => {
-            likeBtn.disabled = false;
-        });
-    });
+// Helper function to show toast notifications
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 220px; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15); border-radius: .5rem;';
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
+// Function to update the like button's visual state
 function updateLikeButton(isLiked) {
     const likeBtn = document.getElementById('like-btn');
     const likeIcon = document.getElementById('like-icon');
@@ -330,25 +269,45 @@ function updateLikeButton(isLiked) {
     }
 }
 
-function showToast(message, type = 'info') {
-    // 创建提示元素
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'error' ? 'danger' : type} position-fixed`;
-    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 200px;';
-    toast.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
-        ${message}
-    `;
+// Main function to set up the like button
+function initLikeButton() {
+    const likeBtn = document.getElementById('like-btn');
+    if (!likeBtn) return;
     
-    document.body.appendChild(toast);
+    const postId = likeBtn.dataset.postId;
     
-    // 3秒后自动移除
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 3000);
+    // Fetch initial status
+    fetch(`/post/${postId}/like/status`)
+        .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch status'))
+        .then(data => updateLikeButton(data.is_liked))
+        .catch(console.error);
+    
+    // Add click listener
+    likeBtn.addEventListener('click', () => {
+        likeBtn.disabled = true;
+        fetch(`/post/${postId}/like`, { method: 'POST' })
+            .then(res => res.ok ? res.json() : Promise.reject('Failed to toggle like'))
+            .then(data => {
+                if (data.success) {
+                    updateLikeButton(data.is_liked);
+                    document.getElementById('likes-count').textContent = data.likes_count;
+                    showToast(data.is_liked ? '点赞成功！' : '已取消点赞', 'success');
+                } else {
+                    showToast(data.message || '操作失败', 'error');
+                }
+            })
+            .catch(() => showToast('网络错误，请稍后重试', 'error'))
+            .finally(() => { likeBtn.disabled = false; });
+    });
 }
+
+// Run scripts after the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.time-ago').forEach(el => {
+        el.textContent = formatTimeAgo(el.dataset.timestamp);
+    });
+    initLikeButton();
+});
 </script>
 {% endblock %}
 

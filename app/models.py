@@ -269,6 +269,13 @@ class Comment(db.Model):
     # 关联关系
     replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]), lazy='dynamic', cascade='all, delete-orphan')
     
+    def soft_delete(self):
+        """软删除评论及其所有回复"""
+        self.is_deleted = True
+        # 递归软删除所有回复
+        for reply in self.replies.filter_by(is_deleted=False).all():
+            reply.soft_delete()
+    
     def to_dict(self):
         """转换为字典格式"""
         return {

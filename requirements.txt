@@ -22,6 +22,7 @@ pyyaml==6.0.1
 
 # Markdown 渲染
 markdown==3.4.4
+pymdown-extensions
 
 # AI/第三方API
 openai>=1.0.0

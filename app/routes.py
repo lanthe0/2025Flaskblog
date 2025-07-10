@@ -4,6 +4,10 @@ from app.models import User, Post, Comment, Like
 from app import db
 from app.forms import CommentForm, CommentEditForm
 import markdown
+from markdown.extensions.fenced_code import FencedCodeExtension
+from markdown.extensions.codehilite import CodeHiliteExtension
+from markdown.extensions.tables import TableExtension
+from markdown.extensions.toc import TocExtension
 
 main_bp = Blueprint('main', __name__)
 
@@ -131,6 +135,24 @@ def post_list():
     posts = Post.query.filter_by(is_published=True, is_deleted=False).order_by(Post.created_at.desc()).all()
     return render_template('post/post.html', posts=posts)
 
+# 发布草稿
+@main_bp.route('/post/<int:post_id>/publish', methods=['POST'])
+@login_required
+def publish_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if not post.can_edit_by(current_user):
+        flash('无权操作此文章', 'danger')
+        return redirect(url_for('main.post_detail', post_id=post.id))
+    
+    if post.is_published:
+        flash('文章已经是发布状态', 'info')
+    else:
+        post.is_published = True
+        db.session.commit()
+        flash('文章已发布', 'success')
+    
+    return redirect(url_for('main.my_posts'))
+
 # 文章详情
 @main_bp.route('/post/<int:post_id>')
 def post_detail(post_id):
@@ -141,10 +163,21 @@ def post_detail(post_id):
         post.views = (post.views or 0) + 1
         db.session.commit()
     
-    html_content = Markup(markdown.markdown(
-        post.content,
-        extensions=['fenced_code', 'codehilite', 'tables', 'toc']
-    ))
+    md = markdown.Markdown(extensions=[
+        'pymdownx.arithmatex',
+        'markdown.extensions.fenced_code',
+        'markdown.extensions.codehilite',
+        'markdown.extensions.tables',
+        'markdown.extensions.toc',
+        'markdown.extensions.extra'
+    ], extension_configs={
+        'pymdownx.arithmatex': {
+            'block_syntax': 'dollar',
+            'inline_syntax': 'dollar'
+        }
+    })
+    html_content = Markup(md.convert(post.content))
+    
     # 只查一级评论
     comments = list(Comment.query.filter_by(post_id=post.id, parent_id=None, is_approved=True, is_deleted=False).order_by(Comment.created_at.asc()).all())
     comment_form = CommentForm()
@@ -224,7 +257,11 @@ def edit_post(post_id):
 @main_bp.route('/my_posts')
 @login_required
 def my_posts():
-    posts = Post.query.filter_by(author_id=current_user.id, is_deleted=False).order_by(Post.created_at.desc()).all()
+    # 只显示未删除的文章，包括已发布和草稿
+    posts = Post.query.filter_by(
+        author_id=current_user.id,
+        is_deleted=False
+    ).order_by(Post.created_at.desc()).all()
     return render_template('user/my_posts.html', posts=posts)
 
 # ===================== 评论相关 =====================

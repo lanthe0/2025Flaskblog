@@ -7,6 +7,8 @@
     
     <!-- Bootstrap CSS -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
     <!-- 自定义CSS -->
     <style>
         :root {
@@ -121,11 +123,11 @@
             cursor: not-allowed;
         }
         
-        .like-icon {
+        #like-icon {
             transition: all 0.3s ease;
         }
         
-        .like-icon.text-danger {
+        .btn-danger #like-icon {
             animation: heartBeat 0.6s ease-in-out;
         }
         
@@ -259,19 +261,42 @@
 
     <!-- Bootstrap JS -->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
-
+    
     {% block extra_js %}
     <script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
     <script>
     window.MathJax = {
-      tex: {
-        inlineMath: [['$', '$'], ['\\(', '\\)']]
-      }
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            tags: 'ams'
+        },
+        options: {
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processHtmlClass: 'tex2jax_process'
+        },
+        startup: {
+            pageReady: function() {
+                return MathJax.startup.defaultPageReady().then(function() {
+                    // 确保所有数学公式都被渲染
+                    document.querySelectorAll('.tex2jax_process').forEach(function(element) {
+                        MathJax.typesetPromise([element]);
+                    });
+                });
+            }
+        }
     };
     </script>
-    <script src="{{ url_for('static', filename='js/es5/tex-mml-chtml.js') }}"></script>
+    <script id="MathJax-script" async src="{{ url_for('static', filename='js/es5/tex-mml-chtml.js') }}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        // 代码高亮
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightBlock(block);
+        });
+    });
+    </script>
     {% endblock %}
 </body>
 </html>

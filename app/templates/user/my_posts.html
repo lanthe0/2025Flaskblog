@@ -9,11 +9,16 @@
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm border-0 rounded-4">
                     <div class="card-body d-flex flex-column">
-                        <h5 class="card-title mb-2">
-                            <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="text-decoration-none text-dark">
-                                {{ post.title }}
-                            </a>
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">
+                                <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="text-decoration-none text-dark">
+                                    {{ post.title }}
+                                </a>
+                            </h5>
+                            {% if not post.is_published %}
+                                <span class="badge bg-warning text-dark">草稿</span>
+                            {% endif %}
+                        </div>
                         <div class="mb-2 text-muted small">
                             <i class="fas fa-clock me-1"></i>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
                         </div>
@@ -21,7 +26,14 @@
                             {{ post.summary or post.content|striptags|truncate(60, True, '...')|replace('#','')|replace('*','')|replace('_','')|replace('`','')|replace('$','') }}
                         </div>
                         <div class="mt-2 d-flex justify-content-between align-items-center">
-                            <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">阅读全文</a>
+                            <div>
+                                <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">阅读全文</a>
+                                {% if not post.is_published %}
+                                <form action="{{ url_for('main.publish_post', post_id=post.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success ms-1">发布</button>
+                                </form>
+                                {% endif %}
+                            </div>
                             <div class="text-muted small">
                                 <i class="fas fa-eye me-1"></i>{{ post.views or 0 }}
                             </div>
