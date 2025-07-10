@@ -236,6 +236,14 @@ class Post(db.Model):
         """获取点赞数"""
         return self.likes.count()
 
+    def can_edit_by(self, user):
+        """检查用户是否可以编辑此文章"""
+        return user and (user.id == self.author_id or getattr(user, 'is_admin', False))
+
+    def can_delete_by(self, user):
+        """检查用户是否可以删除此文章"""
+        return user and (user.id == self.author_id or getattr(user, 'is_admin', False))
+
     def __repr__(self):
         return f'<Post {self.title}>'
 
